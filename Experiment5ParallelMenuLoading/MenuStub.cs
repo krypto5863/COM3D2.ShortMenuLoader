@@ -14,6 +14,7 @@ namespace ShortMenuLoader
 		public bool DelMenu { get; set; }
 		public bool ManMenu { get; set; }
 		public float Priority { get; set; }
+		public bool LegacyMenu { get; set; }
 		public DateTime DateModified { get; set; }
 		public MenuStub()
 		{

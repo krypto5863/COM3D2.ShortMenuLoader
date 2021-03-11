@@ -102,11 +102,13 @@ namespace ShortMenuLoader
 					//SceneEdit.GetMenuItemSetUP causes crash if parallel threaded. Our implementation is thread safe-ish.
 					if (GSModMenuLoad.GetMenuItemSetUP(mi2, strFileName, out string iconLoad))
 					{
-						listOfLoads.Add(mi2);
-
-						QuickEdit.idItemDic[mi2.m_nMenuFileRID] = mi2;
-						QuickEdit.texFileIDDic[mi2.m_nMenuFileRID] = iconLoad;
-						mi2.m_texIcon = Texture2D.whiteTexture;
+						if (iconLoad != null)
+						{
+							listOfLoads.Add(mi2);
+							QuickEdit.idItemDic[mi2.m_nMenuFileRID] = mi2;
+							QuickEdit.texFileIDDic[mi2.m_nMenuFileRID] = iconLoad;
+							mi2.m_texIcon = Texture2D.whiteTexture;
+						}
 					}
 					dicLock.WaitOne();
 					FilesToRead.Remove(strFileName);

@@ -69,6 +69,7 @@ namespace ShortMenuLoader
 		public static Texture2D GetTexture(int menuFileID)
 		{
 			string textureFileName = texFileIDDic[menuFileID];
+
 			if (tex2DDic.ContainsKey(textureFileName))
 			{
 				if (tex2DDic[textureFileName] == null)

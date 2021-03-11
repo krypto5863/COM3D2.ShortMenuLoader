@@ -1,4 +1,5 @@
 ﻿using BepInEx;
+using BepInEx.Configuration;
 using HarmonyLib;
 using MaidStatus;
 using System;
@@ -24,6 +25,7 @@ namespace ShortMenuLoader
 		public static int ThreadsDone = 0;
 
 		public static Stopwatch WatchOverall = new Stopwatch();
+		public static ConfigEntry<bool> UseVanillaCache;
 
 		private void Awake()
 		{
@@ -49,6 +51,10 @@ namespace ShortMenuLoader
 
 			GSModMenuLoad.LoadCache();
 
+			UseVanillaCache = Config.Bind("General", "Use Vanilla Cache", false, "This decides whether a vanilla cache is created, maintained and used on load. Kiss has it's own questionable implementation of a cache, but this cache is questionable in it's own right too.");
+
+			VanillaMenuLoad.LoadCache();
+
 			@this2 = this;
 		}
 		[HarmonyPatch(typeof(SceneEdit), "Start")]
@@ -56,7 +62,7 @@ namespace ShortMenuLoader
 		private static void GetInstance(ref SceneEdit __instance)
 		{
 			WatchOverall.Reset();
-
+			
 			WatchOverall.Start();
 			@this = __instance;
 		}
@@ -135,18 +141,20 @@ namespace ShortMenuLoader
 
 			foreach (KeyValuePair<int, List<int>> keyValuePair in menuGroupMemberDic)
 			{
-				if (menuRidDic.ContainsKey(keyValuePair.Key) && keyValuePair.Value.Count >= 1)
+				if (menuRidDic.ContainsKey(keyValuePair.Key) && keyValuePair.Value.Count >= 1 && keyValuePair.Value != null)
 				{
 					SceneEdit.SMenuItem smenuItem = menuRidDic[keyValuePair.Key];
 					smenuItem.m_bGroupLeader = true;
 					smenuItem.m_listMember = new List<SceneEdit.SMenuItem>();
 					smenuItem.m_listMember.Add(smenuItem);
+
 					for (int n = 0; n < keyValuePair.Value.Count; n++)
 					{
 						smenuItem.m_listMember.Add(menuRidDic[keyValuePair.Value[n]]);
 						smenuItem.m_listMember[smenuItem.m_listMember.Count - 1].m_bMember = true;
 						smenuItem.m_listMember[smenuItem.m_listMember.Count - 1].m_leaderMenu = smenuItem;
 					}
+
 					smenuItem.m_listMember.Sort(delegate (SceneEdit.SMenuItem x, SceneEdit.SMenuItem y)
 									{
 										if (x.m_fPriority == y.m_fPriority)
@@ -164,6 +172,9 @@ namespace ShortMenuLoader
 										return 0;
 									});
 					smenuItem.m_listMember.Sort((SceneEdit.SMenuItem x, SceneEdit.SMenuItem y) => x.m_strMenuFileName.CompareTo(y.m_strMenuFileName));
+				} else if (keyValuePair.Value == null)
+				{
+					Debug.LogError("A key value in menuGroupMemberDic was nulled. This value was skipped for processing as a result.");
 				}
 			}
 

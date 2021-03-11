@@ -20,7 +20,7 @@ namespace ShortMenuLoader
 		private static bool CachePreloadDone = false;
 		public static void LoadCache()
 		{
-			if (Main.UseVanillaCache.Value) 
+			if (Main.UseVanillaCache.Value)
 			{
 				Task.Factory.StartNew(new Action(() =>
 				{
@@ -31,6 +31,10 @@ namespace ShortMenuLoader
 
 					CachePreloadDone = true;
 				}));
+			}
+			else 
+			{
+				CachePreloadDone = true;
 			}
 		}
 		public static IEnumerator VanillaMenuLoadStart(List<SceneEdit.SMenuItem> menuList, Dictionary<int, List<int>> menuGroupMemberDic)

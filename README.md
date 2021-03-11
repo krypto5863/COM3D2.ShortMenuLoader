@@ -23,3 +23,5 @@ This plugin is as simple and drop in and play. From the releases section, drop t
 The first time you enter edit mode will be when a cache is actually built so it will be slower but even then, you may notice an extreme speed difference.
 
 Cache is saved to BepinEx/plugins, it can be deleted if you find it has become corrupt or is presenting an issue, which would be odd and rare.
+
+Vanilla menus cache is available but optional as it cannot detect when a menu file has changed. It is disabled by default in the F1 menu (ConfigurationManager) and in the config file.

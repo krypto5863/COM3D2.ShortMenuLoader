@@ -5,6 +5,8 @@ As the name suggests, this plugin will make your load into Edit mode a lot quick
 
 In testing, this plugin has managed to cut the load times for some users by as much as 80-95% FROM VANILLA. Yes, it works.
 
+I want to clarify that users who already have QuickEditStart and/or CacheEditMenu may not notice a huge improvement. But there should still be some improvement(usually a few seconds) and SML offers tweaks and a smart cache you won't get with those two plugins.
+
 ## Highlights
 - Self-correcting smart cache: Caches mods intelligently and uses it when it is available. Corrects itself when a mod is modified, deleted or added. This allows users with weaker computers to still attain fast speeds with no overhead.
 - Multi-threading: Uses threads to do several load tasks in order to finish faster while causing your game no lag. Combined with Coroutines, it creates a faux async-await.

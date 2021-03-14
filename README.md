@@ -30,4 +30,4 @@ Cache is saved to BepinEx/config, it can be deleted if you find it has become co
 
 Vanilla menus cache is available but optional as it cannot detect when a menu file has changed, it can only detect a difference in `paths.dat` file timestamps. It is disabled by default in the F1 menu (ConfigurationManager) and in the config file.
 
-Your times may not always be 100% consistent.
+Your times may not always be 100% consistent. For one, this will not make vanilla loading THAT much faster. Even with vanilla cache, we still have to wait for an unmodified database to be loaded to even begin loading the vanilla menus. This currently accounts for 70-90% of the delay in most if not all cases. Nothing can be done without some drastic measures. Said database begins loading as soon as you enter the main menu. As a result, your times can appear to fluctuate wildly, but that's because the database may have loaded earlier or later than you expected. To check this, you can refer to the times posted after load and look for the amount of time spent waiting for the unmodified database to finish.

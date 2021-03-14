@@ -14,11 +14,11 @@ using Debug = UnityEngine.Debug;
 
 namespace ShortMenuLoader
 {
-	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.1.1.0")]
+	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.2.0.0")]
 	internal class Main : BaseUnityPlugin
 	{
 		private Harmony harmony;
-		private static Main this2;
+		public static Main this2;
 		public static SceneEdit @this;
 
 		public static float time;
@@ -26,9 +26,14 @@ namespace ShortMenuLoader
 
 		public static Stopwatch WatchOverall = new Stopwatch();
 		public static ConfigEntry<bool> UseVanillaCache;
+		public static ConfigEntry<bool> ChangeModPriority;
 
 		private void Awake()
 		{
+			Debug.Log("Starting awake now...");
+
+			@this2 = this;
+
 			//We set our patcher so we can call it back and patch dynamically as needed.
 			harmony = Harmony.CreateAndPatchAll(typeof(Main));
 
@@ -49,13 +54,13 @@ namespace ShortMenuLoader
 			harmony.Patch(menuItemSetConstructor, new HarmonyMethod(typeof(QuickEdit), "MenuItemSet"));
 			harmony.Patch(colorItemSetConstructor, new HarmonyMethod(typeof(QuickEdit), "MenuItemSet"));
 
-			GSModMenuLoad.LoadCache();
+			@this2.StartCoroutine(GSModMenuLoad.LoadCache());
 
 			UseVanillaCache = Config.Bind("General", "Use Vanilla Cache", false, "This decides whether a vanilla cache is created, maintained and used on load. Kiss has it's own questionable implementation of a cache, but this cache is questionable in it's own right too.");
 
-			VanillaMenuLoad.LoadCache();
+			ChangeModPriority = Config.Bind("General", "Add 10,000 to Mod Item Priority", false, "This option simply adds 10,000 priority to all mod items loaded. Handy if you don't want mod items mix and matching with vanilla stuff or appearing before the remove button.");
 
-			@this2 = this;
+			@this2.StartCoroutine(VanillaMenuLoad.LoadCache());
 		}
 		[HarmonyPatch(typeof(SceneEdit), "Start")]
 		[HarmonyPrefix]
@@ -82,11 +87,13 @@ namespace ShortMenuLoader
 			.SetAndAdvance(OpCodes.Nop, null)
 			.Insert(
 			new CodeInstruction(OpCodes.Ldarg_0),
-			Transpilers.EmitDelegate<Action>(() =>
+			new CodeInstruction(OpCodes.Ldarg_0),
+			Transpilers.EmitDelegate<Action<SceneEdit>>((lthis) =>
 			{
+				@this = lthis;
 
 				Debug.Log("Calling your modified CoRoutine");
-				@this2.StartCoroutine(InitMenuNative());
+				@this.StartCoroutine(InitMenuNative());
 
 			}),
 			new CodeInstruction(OpCodes.Pop)

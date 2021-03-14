@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -14,53 +15,137 @@ namespace ShortMenuLoader
 {
 	internal class GSModMenuLoad
 	{
-		private static readonly Dictionary<string, string> FilesDictionary = new Dictionary<string, string>();
+		public static readonly Dictionary<string, string> FilesDictionary = new Dictionary<string, string>();
+		public static bool DictionaryBuilt = false;
 		private static readonly Dictionary<string, MemoryStream> FilesToRead = new Dictionary<string, MemoryStream>();
-		private static Dictionary<string, MenuStub> MenuCache = new Dictionary<string, MenuStub>();
 
-		private static bool CachePreloadDone = false;
-		public static void LoadCache()
+		private const string CacheFileName = "ShortMenuLoaderCache.json";
+		private static bool CacheLoadDone = false;
+		private static Dictionary<string, MenuStub> MenuCache = new Dictionary<string, MenuStub>();
+		public static IEnumerator LoadCache(int Retry = 0)
 		{
-			Task.Factory.StartNew(new Action(() =>
+
+			CacheLoadDone = false;
+
+			Task cacheLoader = Task.Factory.StartNew(new Action(() =>
 			{
-				if (File.Exists(BepInEx.Paths.ConfigPath + "\\ShortMenuLoaderCache.json"))
+				if (File.Exists(BepInEx.Paths.ConfigPath + "\\" + CacheFileName))
 				{
-					MenuCache = JsonConvert.DeserializeObject<Dictionary<string, MenuStub>>(File.ReadAllText(BepInEx.Paths.ConfigPath + "\\ShortMenuLoaderCache.json"));
+					string jsonString = File.ReadAllText(BepInEx.Paths.ConfigPath + "\\" + CacheFileName);
+
+					var tempDic = JsonConvert.DeserializeObject<Dictionary<string, MenuStub>>(jsonString);
+
+					MenuCache = tempDic;
 				}
 
-				CachePreloadDone = true;
+				CacheLoadDone = true;
 			}));
+
+			while (cacheLoader.IsCompleted == false)
+			{
+				yield return null;
+			}
+
+			if (cacheLoader.IsFaulted)
+			{
+				if (Retry < 3)
+				{
+					Debug.LogWarning($"There was an error while attempting to load the mod cache: \n{cacheLoader.Exception.InnerException.Message}\n{cacheLoader.Exception.InnerException.StackTrace}\n\nAn attempt will be made to restart the load task...");
+
+					yield return new WaitForSecondsRealtime(5);
+
+					Main.@this2.StartCoroutine(LoadCache(++Retry));
+				}
+				else
+				{
+					Debug.LogWarning($"There was an error while attempting to load the mod cache: \n{cacheLoader.Exception.InnerException.Message}\n{cacheLoader.Exception.InnerException.StackTrace}\n\nThis is the 4th attempt to kickstart the task. Cache will be deleted and rebuilt next time.");
+
+					MenuCache = new Dictionary<string, MenuStub>();
+
+					File.Delete(BepInEx.Paths.ConfigPath + "\\" + CacheFileName);
+
+					CacheLoadDone = true;
+				}
+			}
+		}
+		public static IEnumerator SaveCache(int Retry = 0)
+		{
+			Task cacheSaver = Task.Factory.StartNew(new Action(() =>
+			{
+				MenuCache = MenuCache
+				.Where(k => FilesDictionary.Keys.Contains(k.Key))
+				.ToDictionary(t => t.Key, l => l.Value);
+
+				File.WriteAllText(BepInEx.Paths.ConfigPath + "\\" + CacheFileName, JsonConvert.SerializeObject(MenuCache));
+
+				Debug.Log("Finished cleaning and saving the mod cache...");
+			}));
+
+			while (cacheSaver.IsCompleted == false)
+			{
+				yield return null;
+			}
+
+			if (cacheSaver.IsFaulted)
+			{
+				if (Retry < 3)
+				{
+					Debug.LogWarning($"Cache saver task failed due to an unexpected error! This is considered a minor failure: {cacheSaver.Exception.InnerException.Message}\n{cacheSaver.Exception.InnerException.StackTrace}\n\nAn attempt will be made to restart the task again...");
+
+					yield return new WaitForSecondsRealtime(5);
+
+					Main.@this2.StartCoroutine(SaveCache(++Retry));
+
+					yield break;
+				}
+				else
+				{
+					Debug.LogWarning($"Cache saver task failed due to an unexpected error! This is considered a minor failure: {cacheSaver.Exception.InnerException.Message}\n{cacheSaver.Exception.InnerException.StackTrace}\n\nNo further attempts will be made to start the task again...");
+				}
+			}
 		}
 		public static IEnumerator GSMenuLoadStart(List<SceneEdit.SMenuItem> menuList, Dictionary<int, List<int>> menuGroupMemberDic)
 		{
 			HashSet<SceneEdit.SMenuItem> listOfLoads = new HashSet<SceneEdit.SMenuItem>();
+			List<string> listOfDuplicates = new List<string>();
 
 			string path = BepInEx.Paths.GameRootPath;
+
+			FilesToRead.Clear();
+			FilesDictionary.Clear();
+
+			DictionaryBuilt = false;
 
 			Task loaderWorker = Task.Factory.StartNew(new Action(() =>
 			{
 
 				foreach (string s in Directory.GetFiles(path + "\\Mod", "*.menu", SearchOption.AllDirectories))
 				{
-					FilesDictionary[Path.GetFileName(s).ToLower()] = s;
+					if (!FilesDictionary.ContainsKey(Path.GetFileName(s).ToLower()))
+					{
+						FilesDictionary[Path.GetFileName(s).ToLower()] = s;
+					}
+					else
+					{
+						listOfDuplicates.Add(s);
+					}
 				}
 
-				while (CachePreloadDone != true)
+				DictionaryBuilt = true;
+
+				while (CacheLoadDone != true)
 				{
-					Thread.Sleep(5);
+					Thread.Sleep(1);
 				}
 
 				Mutex dicLock = new Mutex();
 
 				Task servant = Task.Factory.StartNew(new Action(() =>
 				{
-
-					foreach (string s in GameUty.ModOnlysMenuFiles)
+					foreach (string s in FilesDictionary.Keys)
 					{
 						try
 						{
-							//Debug.Log($"Loading {s} into memory...");
-
 							if (MenuCache.ContainsKey(s.ToLower()))
 							{
 								dicLock.WaitOne();
@@ -115,9 +200,12 @@ namespace ShortMenuLoader
 					dicLock.ReleaseMutex();
 				}
 
-				FilesDictionary.Clear();
-				FilesToRead.Clear();
+				if (servant.IsFaulted)
+				{
+					Debug.LogError($"Servant task failed due to an unexpected error!");
 
+					throw servant.Exception;
+				}
 			}));
 
 			//We wait until the manager is not busy because starting work while the manager is busy causes egregious bugs.
@@ -126,10 +214,30 @@ namespace ShortMenuLoader
 				yield return null;
 			}
 
+			if (loaderWorker.IsFaulted)
+			{
+				Debug.LogError($"Worker task failed due to an unexpected error! This is considered a full failure: {loaderWorker.Exception.InnerException.Message}\n{loaderWorker.Exception.InnerException.StackTrace}\n\nwe will try restarting the load task...");
+
+				yield return new WaitForSecondsRealtime(2);
+
+				Main.@this.StartCoroutine(GSModMenuLoad.GSMenuLoadStart(menuList, menuGroupMemberDic));
+
+				yield break;
+			}
+
 			foreach (SceneEdit.SMenuItem mi2 in listOfLoads)
 			{
 				try
 				{
+					if (Main.ChangeModPriority.Value)
+					{
+						if (mi2.m_fPriority <= 0)
+						{
+							mi2.m_fPriority = 1f;
+						}
+
+						mi2.m_fPriority += 10000;
+					}
 
 					if (!mi2.m_bMan)
 					{
@@ -167,19 +275,21 @@ namespace ShortMenuLoader
 				}
 			}
 
-			Task.Factory.StartNew(new Action(() =>
-			{
-				MenuCache = MenuCache
-				.Where(k => GameUty.ModOnlysMenuFiles.Contains(k.Key))
-				.ToDictionary(t => t.Key, l => l.Value);
-
-				File.WriteAllText(BepInEx.Paths.ConfigPath + "\\ShortMenuLoaderCache.json", JsonConvert.SerializeObject(MenuCache));
-
-				Debug.Log("Finished cleaning and saving the cache...");
-			}));
-
 			Main.ThreadsDone++;
 			Debug.Log($"Standard mods finished loading at: {Main.WatchOverall.Elapsed}");
+
+			Main.@this.StartCoroutine(SaveCache());
+
+
+			if (listOfDuplicates.Count > 0)
+			{
+				Debug.LogWarning($"There are {listOfDuplicates.Count} duplicate menus in your mod folder!");
+
+				foreach (string s in listOfDuplicates)
+				{
+					Debug.LogWarning("We found a duplicate that should be corrected immediately in your mod folder at: " + s);
+				}
+			}
 		}
 
 		public static bool GetMenuItemSetUP(SceneEdit.SMenuItem mi, string f_strMenuFileName, out string IconTex)
@@ -275,7 +385,9 @@ namespace ShortMenuLoader
 						}
 
 						mi.m_boDelOnly = tempStub.DelMenu;
+
 						mi.m_fPriority = tempStub.Priority;
+
 						mi.m_bMan = tempStub.ManMenu;
 
 						IconTex = tempStub.Icon;

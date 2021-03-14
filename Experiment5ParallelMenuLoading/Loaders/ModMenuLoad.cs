@@ -20,6 +20,8 @@ namespace ShortMenuLoader
 		{
 			Dictionary<SceneEdit.SMenuItem, byte[]> modIconLoads = new Dictionary<SceneEdit.SMenuItem, byte[]>();
 
+			modFiles.Clear();
+
 			Task loaderWorker = Task.Factory.StartNew(new Action(() =>
 			{
 
@@ -62,11 +64,29 @@ namespace ShortMenuLoader
 					modFiles.Remove(strFileName);
 					dicLock.ReleaseMutex();
 				}
+
+				if (servantWorker.IsFaulted)
+				{
+					Debug.LogError($"Servant task failed due to an unexpected error!");
+
+					throw servantWorker.Exception;
+				}
 			}));
 
 			while (!loaderWorker.IsCompleted)
 			{
 				yield return null;
+			}
+
+			if (loaderWorker.IsFaulted)
+			{
+				Debug.LogError($"Worker task failed due to an unexpected error! This is considered a full failure: {loaderWorker.Exception.InnerException.Message}\n{loaderWorker.Exception.InnerException.StackTrace}\n\nwe will try restarting the load task...");
+
+				yield return new WaitForSecondsRealtime(2);
+
+				Main.@this.StartCoroutine(ModMenuLoad.ModMenuLoadStart(menuList, menuGroupMemberDic));
+
+				yield break;
 			}
 
 			foreach (KeyValuePair<SceneEdit.SMenuItem, byte[]> kv in modIconLoads)
@@ -119,6 +139,8 @@ namespace ShortMenuLoader
 			}
 			Main.ThreadsDone++;
 			Debug.Log($".Mods finished loading at: {Main.WatchOverall.Elapsed}");
+
+			modFiles.Clear();
 		}
 		public static bool InitModMenuItemScript(SceneEdit.SMenuItem mi, string f_strModFileName, out byte[] Icon)
 		{
@@ -177,7 +199,6 @@ namespace ShortMenuLoader
 			}
 
 			binaryReader.Close();
-			binaryReader = null;
 			mi.m_bMod = true;
 			mi.m_strMenuFileName = Path.GetFileName(f_strModFileName);
 			mi.m_nMenuFileRID = mi.m_strMenuFileName.ToLower().GetHashCode();

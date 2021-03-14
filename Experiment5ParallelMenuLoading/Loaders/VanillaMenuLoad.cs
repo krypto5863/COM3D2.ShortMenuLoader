@@ -15,26 +15,96 @@ namespace ShortMenuLoader
 {
 	internal class VanillaMenuLoad
 	{
-		private static Dictionary<string, MenuStub> MenuCache = new Dictionary<string, MenuStub>();
 
-		private static bool CachePreloadDone = false;
-		public static void LoadCache()
+		private const string CacheFileName = "ShortMenuLoaderVanillaCache.json";
+		private static bool CacheLoadDone = false;
+		private static Dictionary<string, MenuStub> MenuCache = new Dictionary<string, MenuStub>();
+		public static IEnumerator LoadCache(int Retry = 0)
+		{
+			CacheLoadDone = false;
+
+			if (Main.UseVanillaCache.Value)
+			{
+				Task cacheLoader = Task.Factory.StartNew(new Action(() =>
+				{
+					if (File.Exists(BepInEx.Paths.ConfigPath + "\\" + CacheFileName))
+					{
+						string jsonString = File.ReadAllText(BepInEx.Paths.ConfigPath + "\\" + CacheFileName);
+
+						var tempDic = JsonConvert.DeserializeObject<Dictionary<string, MenuStub>>(jsonString);
+
+						MenuCache = tempDic;
+					}
+				}));
+
+				while (cacheLoader.IsCompleted == false)
+				{
+					yield return null;
+				}
+
+				if (cacheLoader.IsFaulted)
+				{
+					if (Retry < 3)
+					{
+						Debug.LogWarning($"There was an error while attempting to load the vanilla cache: \n{cacheLoader.Exception.InnerException.Message}\n{cacheLoader.Exception.InnerException.StackTrace}\n\nAn attempt will be made to restart the load task...");
+
+						yield return new WaitForSecondsRealtime(5);
+
+						Main.@this2.StartCoroutine(LoadCache(++Retry));
+
+						yield break;
+					}
+					else
+					{
+						Debug.LogWarning($"There was an error while attempting to load the vanilla cache: \n{cacheLoader.Exception.InnerException.Message}\n{cacheLoader.Exception.InnerException.StackTrace}\n\nThis is the 4th attempt to kickstart the task. Cache will be deleted and rebuilt next time.");
+
+						MenuCache = new Dictionary<string, MenuStub>();
+
+						File.Delete(BepInEx.Paths.ConfigPath + "\\" + CacheFileName);
+					}
+				}
+			}
+			CacheLoadDone = true;
+		}
+		public static IEnumerator SaveCache(Dictionary<SceneEdit.SMenuItem, string> filesToLoad, int Retry = 0)
 		{
 			if (Main.UseVanillaCache.Value)
 			{
-				Task.Factory.StartNew(new Action(() =>
+				Task cacheSaver = Task.Factory.StartNew(new Action(() =>
 				{
-					if (File.Exists(BepInEx.Paths.ConfigPath + "\\ShortMenuLoaderVanillaCache.json"))
-					{
-						MenuCache = JsonConvert.DeserializeObject<Dictionary<string, MenuStub>>(File.ReadAllText(BepInEx.Paths.ConfigPath + "\\ShortMenuLoaderVanillaCache.json"));
-					}
+					MenuCache = MenuCache
+					.Where(k => filesToLoad.Keys
+					.Select(t => t.m_strMenuFileName)
+					.ToList()
+					.Contains(k.Key)
+					)
+					.ToDictionary(t => t.Key, l => l.Value);
 
-					CachePreloadDone = true;
+					File.WriteAllText(BepInEx.Paths.ConfigPath + "\\" + CacheFileName, JsonConvert.SerializeObject(MenuCache));
+
+					Debug.Log("Finished cleaning and saving the mod cache...");
 				}));
-			}
-			else 
-			{
-				CachePreloadDone = true;
+
+				while (cacheSaver.IsCompleted == false)
+				{
+					yield return null;
+				}
+
+				if (cacheSaver.IsFaulted)
+				{
+					if (Retry < 3)
+					{
+						Debug.LogWarning($"Cache saver task failed due to an unexpected error! This is considered a minor failure: {cacheSaver.Exception.InnerException.Message}\n{cacheSaver.Exception.InnerException.StackTrace}\n\nAn attempt will be made to restart the task again...");
+
+						yield return new WaitForSecondsRealtime(5);
+
+						Main.@this2.StartCoroutine(SaveCache(filesToLoad, ++Retry));
+					}
+					else
+					{
+						Debug.LogWarning($"Cache saver task failed due to an unexpected error! This is considered a minor failure: {cacheSaver.Exception.InnerException.Message}\n{cacheSaver.Exception.InnerException.StackTrace}\n\nNo further attempts will be made to start the task again...");
+					}
+				}
 			}
 		}
 		public static IEnumerator VanillaMenuLoadStart(List<SceneEdit.SMenuItem> menuList, Dictionary<int, List<int>> menuGroupMemberDic)
@@ -79,7 +149,7 @@ namespace ShortMenuLoader
 				}
 			}
 
-			while (CachePreloadDone != true && Main.UseVanillaCache.Value) 
+			while (CacheLoadDone != true && Main.UseVanillaCache.Value)
 			{
 				yield return null;
 			}
@@ -88,29 +158,36 @@ namespace ShortMenuLoader
 			{
 				try
 				{
-					string iconFileName;
+					string iconFileName = null;
 
 					if (MenuCache.ContainsKey(mi.m_strMenuFileName) && Main.UseVanillaCache.Value)
 					{
-						//Debug.Log($"Loading {mi.m_strMenuFileName} from cache...");
-
 						MenuStub tempStub = MenuCache[mi.m_strMenuFileName];
 
-						mi.m_strMenuName = tempStub.Name;
-						mi.m_strInfo = tempStub.Description;
-						mi.m_mpn = (MPN)Enum.Parse(typeof(MPN), tempStub.Category);
-						mi.m_strCateName = tempStub.Category;
-						mi.m_eColorSetMPN = (MPN)Enum.Parse(typeof(MPN), tempStub.ColorSetMPN);
-						mi.m_strMenuNameInColorSet = tempStub.ColorSetMenu;
-						mi.m_pcMultiColorID = (MaidParts.PARTS_COLOR)Enum.Parse(typeof(MaidParts.PARTS_COLOR), tempStub.MultiColorID);
-						mi.m_boDelOnly = tempStub.DelMenu;
-						mi.m_fPriority = tempStub.Priority;
-						mi.m_bMan = tempStub.ManMenu;
-						mi.m_bOld = tempStub.LegacyMenu;
-						
-						iconFileName = tempStub.Icon;
+						if (tempStub.DateModified == File.GetLastWriteTimeUtc(BepInEx.Paths.GameRootPath + "\\GameData\\paths.dat"))
+						{
+							mi.m_strMenuName = tempStub.Name;
+							mi.m_strInfo = tempStub.Description;
+							mi.m_mpn = (MPN)Enum.Parse(typeof(MPN), tempStub.Category);
+							mi.m_strCateName = tempStub.Category;
+							mi.m_eColorSetMPN = (MPN)Enum.Parse(typeof(MPN), tempStub.ColorSetMPN);
+							mi.m_strMenuNameInColorSet = tempStub.ColorSetMenu;
+							mi.m_pcMultiColorID = (MaidParts.PARTS_COLOR)Enum.Parse(typeof(MaidParts.PARTS_COLOR), tempStub.MultiColorID);
+							mi.m_boDelOnly = tempStub.DelMenu;
+							mi.m_fPriority = tempStub.Priority;
+							mi.m_bMan = tempStub.ManMenu;
+							mi.m_bOld = tempStub.LegacyMenu;
+
+							iconFileName = tempStub.Icon;
+						}
+						else
+						{
+							Debug.LogWarning("GameData folder was changed! We'll be wiping the vanilla cache clean and rebuilding it now.");
+							MenuCache = new Dictionary<string, MenuStub>();
+						}
 					}
-					else
+
+					if (string.IsNullOrEmpty(mi.m_strMenuName))
 					{
 						//Debug.Log($"Loading {mi.m_strMenuFileName} from the database as it wasn't in cache...");
 						VanillaMenuLoad.ReadMenuItemDataFromNative(mi, filesToLoadFromDatabase[mi], out iconFileName);
@@ -144,9 +221,14 @@ namespace ShortMenuLoader
 				}
 			}
 
+			while (GSModMenuLoad.DictionaryBuilt == false) 
+			{
+				yield return null;
+			}
+
 			foreach (SceneEdit.SMenuItem mi in filesToLoad.Keys)
 			{
-				if (!mi.m_bMan && Main.@this.editItemTextureCache.IsRegister(mi.m_nMenuFileRID))
+				if (!mi.m_bMan && !GSModMenuLoad.FilesDictionary.ContainsKey(mi.m_strMenuFileName) && Main.@this.editItemTextureCache.IsRegister(mi.m_nMenuFileRID))
 				{
 					AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(Main.@this, new object[] { mi });
 
@@ -181,26 +263,10 @@ namespace ShortMenuLoader
 				}
 			}
 
-			if (Main.UseVanillaCache.Value)
-			{
-				Task.Factory.StartNew(new Action(() =>
-				{
-					MenuCache = MenuCache
-				.Where(k => filesToLoad.Keys
-				.Select(t => t.m_strMenuFileName)
-				.ToList()
-				.Contains(k.Key)
-				)
-				.ToDictionary(t => t.Key, l => l.Value);
-
-					File.WriteAllText(BepInEx.Paths.ConfigPath + "\\ShortMenuLoaderVanillaCache.json", JsonConvert.SerializeObject(MenuCache));
-
-					Debug.Log("Finished cleaning and saving the cache...");
-				}));
-			}
-
 			Main.ThreadsDone++;
 			Debug.Log($"Vanilla menus finished loading in {watch1.Elapsed} at: {Main.WatchOverall.Elapsed}");
+
+			Main.@this.StartCoroutine(SaveCache(filesToLoad));
 		}
 		public static void ReadMenuItemDataFromNative(SceneEdit.SMenuItem mi, int menuDataBaseIndex, out string iconStr)
 		{
@@ -233,7 +299,8 @@ namespace ShortMenuLoader
 					Priority = mi.m_fPriority,
 					ManMenu = mi.m_bMan,
 					LegacyMenu = mi.m_bOld,
-					Icon = iconStr
+					Icon = iconStr,
+					DateModified = File.GetLastWriteTimeUtc(BepInEx.Paths.GameRootPath + "\\GameData\\paths.dat")
 				};
 
 				MenuCache[mi.m_strMenuFileName] = newStub;

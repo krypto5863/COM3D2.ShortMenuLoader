@@ -113,9 +113,6 @@ namespace ShortMenuLoader
 			Dictionary<SceneEdit.SMenuItem, int> filesToLoadFromDatabase = new Dictionary<SceneEdit.SMenuItem, int>();
 			Dictionary<SceneEdit.SMenuItem, string> filesToLoad = new Dictionary<SceneEdit.SMenuItem, string>();
 
-			Stopwatch watch1 = new Stopwatch();
-			watch1.Start();
-
 			//We wait until the manager is not busy because starting work while the manager is busy causes egregious bugs.
 			while (GameMain.Instance.CharacterMgr.IsBusy())
 			{
@@ -124,10 +121,15 @@ namespace ShortMenuLoader
 
 			MenuDataBase menuDataBase = GameMain.Instance.MenuDataBase;
 
+			Stopwatch waitOnKiss = new Stopwatch();
+			waitOnKiss.Start();
+
 			while (!menuDataBase.JobFinished())
 			{
 				yield return null;
 			}
+
+			waitOnKiss.Stop();
 
 			int fileCount = menuDataBase.GetDataSize();
 
@@ -264,7 +266,7 @@ namespace ShortMenuLoader
 			}
 
 			Main.ThreadsDone++;
-			Debug.Log($"Vanilla menus finished loading in {watch1.Elapsed} at: {Main.WatchOverall.Elapsed}");
+			Debug.Log($"Vanilla menus finished loading at: {Main.WatchOverall.Elapsed}. We also spent {waitOnKiss.Elapsed} waiting for an unmodified database to finish loading...");
 
 			Main.@this.StartCoroutine(SaveCache(filesToLoad));
 		}

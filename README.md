@@ -1,7 +1,7 @@
 # COM3D2.ShortMenuLoader
 A plugin dedicated to fixing Kiss's horrendous code and making edit mode loading as fast as it can be.
 
-As the name suggests, this plugin will make your load into Edit mode a lot quicker. You will see large buffs to your loading speed if you have large mod folders. Players with little to no mods (inside of their Mod folder) may not notice any differences.
+As the name suggests, this plugin will make your load into Edit mode a lot quicker. You will see large buffs to your loading speed if you have large mod folders. Players with little to no mods (inside of their Mod folder), OR players who already utilized CacheEditMenu and QuickEditStart may not notice any large differences.
 
 In testing, this plugin has managed to cut the load times for some users by as much as 80-95%. Yes, it works.
 

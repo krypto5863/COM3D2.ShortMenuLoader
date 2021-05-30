@@ -14,7 +14,7 @@ using Debug = UnityEngine.Debug;
 
 namespace ShortMenuLoader
 {
-	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.2.0.0")]
+	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.2.1.0")]
 	internal class Main : BaseUnityPlugin
 	{
 		private Harmony harmony;

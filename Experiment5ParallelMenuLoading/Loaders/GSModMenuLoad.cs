@@ -375,7 +375,7 @@ namespace ShortMenuLoader
 							mi.m_strMenuNameInColorSet = tempStub.ColorSetMenu;
 						}
 
-						if (tempStub.MultiColorID == "null")
+						if (tempStub.MultiColorID == null)
 						{
 							mi.m_pcMultiColorID = MaidParts.PARTS_COLOR.NONE;
 						}
@@ -432,7 +432,7 @@ namespace ShortMenuLoader
 
 				BinaryReader binaryReader = new BinaryReader(FilesToRead[f_strMenuFileName], Encoding.UTF8);
 				string text = binaryReader.ReadString();
-				NDebug.Assert(text == "CM3D2_MENU", "ProcScriptBin 例外 : ヘッダーファイルが不正です。" + text);
+				NDebug.Assert(text == "CM3D2_MENU", "ProcScriptBin 例外 : ヘッダーファイルが不正です。" + text + " @ " + f_strMenuFileName);
 				binaryReader.ReadInt32();
 				path = binaryReader.ReadString();
 				binaryReader.ReadString();
@@ -519,7 +519,6 @@ namespace ShortMenuLoader
 						else if (stringCom == "tex" || stringCom == "テクスチャ変更")
 						{
 							MaidParts.PARTS_COLOR pcMultiColorID = MaidParts.PARTS_COLOR.NONE;
-							cacheEntry.MultiColorID = "null";
 							if (stringList.Length == 6)
 							{
 								string text10 = stringList[5];

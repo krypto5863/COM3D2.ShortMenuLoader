@@ -52,7 +52,7 @@ namespace Experiment5ParallelMenuLoading
 			Transpilers.EmitDelegate<Action>(() =>
 			{
 
-				Debug.Log("Calling your control test coroutine.");
+				Main.logger.LogDebug("Calling your control test coroutine.");
 				@this2.StartCoroutine(InitMenuNative());
 
 			}),
@@ -76,7 +76,7 @@ namespace Experiment5ParallelMenuLoading
 
 			Stopwatch watch1 = new Stopwatch();
 
-			Debug.Log("Vanilla menu file load has now begun.");
+			Main.logger.LogDebug("Vanilla menu file load has now begun.");
 
 			watch1.Start();
 
@@ -102,14 +102,14 @@ namespace Experiment5ParallelMenuLoading
 					}
 					catch (Exception ex)
 					{
-						Debug.LogError(string.Concat(new string[]
+						Main.logger.LogError(string.Concat(new string[]
 						{
-					"ReadMenuItemDataFromNative 例外／",
-					fileName,
-					"／",
-					ex.Message,
-					" StackTrace／",
-					ex.StackTrace
+							"ReadMenuItemDataFromNative (例外) tossed an exception while reading: ",
+							fileName,
+							"\n",
+							ex.Message,
+							"\n",
+							ex.StackTrace
 						}));
 					}
 					if (!mi.m_bMan && @this.editItemTextureCache.IsRegister(mi.m_nMenuFileRID))
@@ -188,7 +188,7 @@ namespace Experiment5ParallelMenuLoading
 
 			watch1.Stop();
 
-			Debug.LogError($"Vanilla menu file load finished in: {watch1.Elapsed}");
+			Main.logger.LogInfo($"Vanilla menu file load finished in: {watch1.Elapsed}");
 
 			yield break;
 		}

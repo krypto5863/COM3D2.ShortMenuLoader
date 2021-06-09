@@ -86,7 +86,7 @@ namespace Experiment5ParallelMenuLoading
 			Transpilers.EmitDelegate<Action>(() =>
 			{
 
-				Debug.Log("Calling your test coroutine.");
+				Main.logger.LogInfo("Calling your test coroutine.");
 
 				ListOfContinues = new Dictionary<SceneEdit.SMenuItem, string>();
 				Test2Done = false;
@@ -110,7 +110,7 @@ namespace Experiment5ParallelMenuLoading
 		public static void test2()
 		{
 
-			Debug.LogError("Coroutine was successfully engaged!");
+			Main.logger.LogError("Coroutine was successfully engaged!");
 
 			while (GameMain.Instance.CharacterMgr.IsBusy())
 			{
@@ -126,7 +126,7 @@ namespace Experiment5ParallelMenuLoading
 
 			test.Start();
 
-			Debug.LogError("Reaching first access method.");
+			Main.logger.LogError("Reaching first access method.");
 
 			AccessTools.Method(typeof(SceneEdit), "InitCategoryList").Invoke(@this, null);
 			//@this.InitCategoryList();
@@ -151,7 +151,7 @@ namespace Experiment5ParallelMenuLoading
 					}
 					catch (Exception ex)
 					{
-						Debug.LogError(string.Concat(new string[]
+						Main.logger.LogError(string.Concat(new string[]
 						{
 						"ReadMenuItemDataFromNative 例外／",
 						fileName,
@@ -202,18 +202,18 @@ namespace Experiment5ParallelMenuLoading
 				Stopwatch test2 = new Stopwatch();
 
 				test2.Start();
-				Debug.LogError("Invoking GetMenuItemSetUP");
+				Main.logger.LogError("Invoking GetMenuItemSetUP");
 
 				SceneEdit.SMenuItem mi2 = new SceneEdit.SMenuItem();
 				if (Main.GetMenuItemSetUP(mi2, strFileName, out string IconTex, false))
 				{
-					Debug.LogError("Managed to setup menu item correctly. Adding to list to continue processing...");
+					Main.logger.LogError("Managed to setup menu item correctly. Adding to list to continue processing...");
 					ListOfContinues[mi2] = IconTex;
 				}
 
 				//Thread.Sleep(100);
 
-				Debug.LogError("Finished GetMenuItemSetUP: " + test2.Elapsed);
+				Main.logger.LogError("Finished GetMenuItemSetUP: " + test2.Elapsed);
 			}//);
 
 
@@ -228,21 +228,21 @@ namespace Experiment5ParallelMenuLoading
 		public static IEnumerator SetupTexturesCoRoutine()
 		{
 
-			Debug.LogError($"Starting coroutine to set textures to menu items.");
+			Main.logger.LogError($"Starting coroutine to set textures to menu items.");
 
 			while (Test2Done != true) 
 			{
 				yield return null;
 			}
 
-			Debug.LogError($"Test2 part 1 finished in {test.Elapsed}\n. Creating textures....");
+			Main.logger.LogError($"Test2 part 1 finished in {test.Elapsed}\n. Creating textures....");
 
 			foreach (KeyValuePair<SceneEdit.SMenuItem, string> dic in ListOfContinues)
 			{
 				dic.Key.m_texIcon = ImportCM.CreateTexture(dic.Value);
 			}
 
-			Debug.LogError($"Done creating textures at {test.Elapsed}, continuing Test2 ");
+			Main.logger.LogError($"Done creating textures at {test.Elapsed}, continuing Test2 ");
 
 			CoRouteDone = true;
 
@@ -253,9 +253,9 @@ namespace Experiment5ParallelMenuLoading
 				yield return null;
 			}
 
-			Debug.LogError($"Test2 finished it's work at {test.Elapsed}");
+			Main.logger.LogError($"Test2 finished it's work at {test.Elapsed}");
 
-			Debug.LogError("Invoking coroutines...");
+			Main.logger.LogError("Invoking coroutines...");
 
 			//yield return @this.StartCoroutine(@this.CoLoadWait());
 			@this.StartCoroutine(AccessTools.Method(typeof(SceneEdit), "CoLoadWait").Invoke(@this, null) as IEnumerator);
@@ -263,7 +263,7 @@ namespace Experiment5ParallelMenuLoading
 			//yield return @this.StartCoroutine(@this.FixedInitMenu(menuList, @this.m_menuRidDic, menuGroupMemberDic));
 			@this.StartCoroutine(AccessTools.Method(typeof(SceneEdit), "FixedInitMenu").Invoke(@this, new object[] { SavedmenuList, @this.m_menuRidDic, SavedmenuGroupMemberDic }) as IEnumerator);
 
-			Debug.LogError($"Finished work at {test.Elapsed}");
+			Main.logger.LogError($"Finished work at {test.Elapsed}");
 		}
 
 		public static void Test2Continuation()
@@ -272,7 +272,7 @@ namespace Experiment5ParallelMenuLoading
 
 			//test3.Start();
 
-			Debug.LogError("Starting task scheduler. Going three at a time. Waiting until all complete before doing another 3.");
+			Main.logger.LogError("Starting task scheduler. Going three at a time. Waiting until all complete before doing another 3.");
 
 			var list = ListOfContinues.Keys.ToArray();
 
@@ -280,12 +280,12 @@ namespace Experiment5ParallelMenuLoading
 
 			while (i < ListOfContinues.Keys.Count()) 
 			{
-				Debug.LogError("Relooping for.");
+				Main.logger.LogError("Relooping for.");
 
 				int d = 0;
 				var taskList = new List<Task>();
 
-				Debug.LogError("Creating task...");
+				Main.logger.LogError("Creating task...");
 
 				while (d < 1 && i < ListOfContinues.Keys.Count()) 
 				{
@@ -299,21 +299,21 @@ namespace Experiment5ParallelMenuLoading
 					++d;
 				}
 
-				//Debug.LogError($"Waiting for tasks to complete: {taskList.Count}");
+				//Main.logger.LogError($"Waiting for tasks to complete: {taskList.Count}");
 
 				Task.WaitAll(taskList.ToArray());
 				
-				Debug.LogError("All tasks complete. Starting a new batch.");
+				Main.logger.LogError("All tasks complete. Starting a new batch.");
 			}
 
 			//test3.Stop();
-			//Debug.LogError($"Scheduler worked on {ListOfContinues.Keys.Count} menu files and finished the work at {test3.Elapsed}");
+			//Main.logger.LogError($"Scheduler worked on {ListOfContinues.Keys.Count} menu files and finished the work at {test3.Elapsed}");
 
 			Test2ContinuatonDone = true;
 
 			//test.Stop();
 
-			//Debug.LogError($"Done {test.Elapsed}");
+			//Main.logger.LogError($"Done {test.Elapsed}");
 
 			//yield break;
 		}
@@ -325,21 +325,21 @@ namespace Experiment5ParallelMenuLoading
 			if (!mi2.m_bMan && !(mi2.m_texIconRef == null))
 			{
 				test2.Start();
-				Debug.LogError("Invoking addmenuitemtolist");
+				Main.logger.LogError("Invoking addmenuitemtolist");
 				AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(@this, new object[] { mi2 });
 				//@this.AddMenuItemToList(mi2);
 				test2.Stop();
-				Debug.LogError($"Done invoking AddMenuItemToList at: {test2.Elapsed}");
+				Main.logger.LogError($"Done invoking AddMenuItemToList at: {test2.Elapsed}");
 				if (!@this.m_menuRidDic.ContainsKey(mi2.m_nMenuFileRID))
 				{
 					@this.m_menuRidDic.Add(mi2.m_nMenuFileRID, mi2);
 				}
 				test2.Start();
-				Debug.LogError("Invoking GetParentMenuFileName");
+				Main.logger.LogError("Invoking GetParentMenuFileName");
 				string parentMenuName2 = AccessTools.Method(typeof(SceneEdit), "GetParentMenuFileName").Invoke(@this, new object[] { mi2 }) as string;
 				//string parentMenuName2 = SceneEdit.GetParentMenuFileName(mi2);
 				test2.Stop();
-				Debug.LogError($"Done Invoking GetParentMenuFileName at: {test2.Elapsed}");
+				Main.logger.LogError($"Done Invoking GetParentMenuFileName at: {test2.Elapsed}");
 				test2.Start();
 				if (!string.IsNullOrEmpty(parentMenuName2))
 				{
@@ -360,12 +360,12 @@ namespace Experiment5ParallelMenuLoading
 				if (true || 0.5f < Time.realtimeSinceStartup - time)
 				{
 					//yield return null;
-					Debug.LogError($"Sleeping thread, 100ms...");
+					Main.logger.LogError($"Sleeping thread, 100ms...");
 					//Thread.Sleep(20);
 					time = Time.realtimeSinceStartup;
 				}*/
 				test2.Stop();
-				Debug.LogError($"Finished processing one menu file in {test2.Elapsed}");
+				Main.logger.LogError($"Finished processing one menu file in {test2.Elapsed}");
 			}
 		}
 
@@ -396,7 +396,7 @@ namespace Experiment5ParallelMenuLoading
 			}
 			catch (Exception ex)
 			{
-				Debug.LogError(string.Concat(new string[]
+				Main.logger.LogError(string.Concat(new string[]
 				{
 				"GetMenuItemSetUP 例外／",
 				f_strMenuFileName,
@@ -440,7 +440,7 @@ namespace Experiment5ParallelMenuLoading
 			}
 			catch (Exception ex)
 			{
-				Debug.LogError(string.Concat(new string[]
+				Main.logger.LogError(string.Concat(new string[]
 				{
 				"メニューファイルがが読み込めませんでした。 : ",
 				f_strMenuFileName,
@@ -516,7 +516,7 @@ namespace Experiment5ParallelMenuLoading
 							}
 							catch
 							{
-								Debug.LogWarning("カテゴリがありません。" + mi.m_strCateName);
+								Main.logger.LogWarning("カテゴリがありません。" + mi.m_strCateName);
 								mi.m_mpn = MPN.null_mpn;
 							}
 						}
@@ -528,7 +528,7 @@ namespace Experiment5ParallelMenuLoading
 							}
 							catch
 							{
-								Debug.LogWarning("カテゴリがありません。" + mi.m_strCateName);
+								Main.logger.LogWarning("カテゴリがありません。" + mi.m_strCateName);
 							}
 							if (stringList.Length >= 3)
 							{
@@ -567,11 +567,11 @@ namespace Experiment5ParallelMenuLoading
 										string text11 = stringList[1];
 										if (text11 == string.Empty)
 										{
-											Debug.LogError("err SaveItem \"" + text11);
+											Main.logger.LogError("err SaveItem \"" + text11);
 										}
 										if (text11 == null)
 										{
-											Debug.LogError("err SaveItem null=\"" + text11);
+											Main.logger.LogError("err SaveItem null=\"" + text11);
 										}
 										if (text11 != string.Empty)
 										{
@@ -604,7 +604,7 @@ namespace Experiment5ParallelMenuLoading
 			}
 			catch (Exception ex2)
 			{
-				Debug.LogError(string.Concat(new string[]
+				Main.logger.LogError(string.Concat(new string[]
 				{
 				"Exception ",
 				Path.GetFileName(path),
@@ -628,7 +628,7 @@ namespace Experiment5ParallelMenuLoading
 				}
 				catch (Exception)
 				{
-					Debug.LogError("Error:");
+					Main.logger.LogError("Error:");
 				}
 			}
 			binaryReader.Close();
@@ -638,7 +638,7 @@ namespace Experiment5ParallelMenuLoading
 
 		public static IEnumerator ThrowConcurrentException(string error)
 		{
-			Debug.LogError("A concurrent thread ran into this error: " + error);
+			Main.logger.LogError("A concurrent thread ran into this error: " + error);
 
 			yield return null;
 		}

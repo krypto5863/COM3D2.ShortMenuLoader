@@ -14,7 +14,7 @@ using Debug = UnityEngine.Debug;
 
 namespace ShortMenuLoader
 {
-	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.2.1.0")]
+	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.3.0")]
 	internal class Main : BaseUnityPlugin
 	{
 		private Harmony harmony;
@@ -24,13 +24,19 @@ namespace ShortMenuLoader
 		public static float time;
 		public static int ThreadsDone = 0;
 
+		public static BepInEx.Logging.ManualLogSource logger;
+
 		public static Stopwatch WatchOverall = new Stopwatch();
+		public static ConfigEntry<float> BreakInterval;
 		public static ConfigEntry<bool> UseVanillaCache;
 		public static ConfigEntry<bool> ChangeModPriority;
 
 		private void Awake()
 		{
-			Debug.Log("Starting awake now...");
+
+			logger = this.Logger;
+
+			Main.logger.LogDebug("Starting awake now...");
 
 			@this2 = this;
 
@@ -55,6 +61,8 @@ namespace ShortMenuLoader
 			harmony.Patch(colorItemSetConstructor, new HarmonyMethod(typeof(QuickEdit), "MenuItemSet"));
 
 			@this2.StartCoroutine(GSModMenuLoad.LoadCache());
+
+			BreakInterval = Config.Bind("General", "Time Between Breaks in Seconds", 0.5f, "The break interval is the time between each break that the co-routine takes where it returns processing back to the main thread. After one frame, processing is given back to the co-routine. Higher values can help with low-end processing times but can cause instability if set too high. If after all of this you're still confused, leave it alone.");
 
 			UseVanillaCache = Config.Bind("General", "Use Vanilla Cache", false, "This decides whether a vanilla cache is created, maintained and used on load. Kiss has it's own questionable implementation of a cache, but this cache is questionable in it's own right too.");
 
@@ -92,7 +100,7 @@ namespace ShortMenuLoader
 			{
 				@this = lthis;
 
-				Debug.Log("Calling your modified CoRoutine");
+				Main.logger.LogDebug("Calling your modified CoRoutine");
 				@this.StartCoroutine(InitMenuNative());
 
 			}),
@@ -114,7 +122,7 @@ namespace ShortMenuLoader
 
 			AccessTools.Method(typeof(SceneEdit), "InitCategoryList").Invoke(Main.@this, null);
 
-			Debug.Log($"Files began loading at: {WatchOverall.Elapsed}");
+			Main.logger.LogInfo($"Files began loading at: {WatchOverall.Elapsed}");
 
 			//These coroutines hold the loading code for each type of item related file.
 			this2.StartCoroutine(GSModMenuLoad.GSMenuLoadStart(menuList, menuGroupMemberDic));
@@ -127,7 +135,7 @@ namespace ShortMenuLoader
 				yield return null;
 			}
 
-			Debug.Log($"All loaders finished at: {WatchOverall.Elapsed}.");
+			Main.logger.LogInfo($"All loaders finished at: {WatchOverall.Elapsed}.");
 			//Setting threads back to 0 for next loads.
 			ThreadsDone = 0;
 
@@ -137,7 +145,7 @@ namespace ShortMenuLoader
 			//Does something...
 			yield return @this.StartCoroutine(AccessTools.Method(typeof(SceneEdit), "CoLoadWait").Invoke(@this, null) as IEnumerator);
 
-			Debug.Log($"Loading completely done at: {WatchOverall.Elapsed}.");
+			Main.logger.LogInfo($"Loading completely done at: {WatchOverall.Elapsed}.");
 		}
 		private static IEnumerator FixedInitMenu(List<SceneEdit.SMenuItem> menuList, Dictionary<int, SceneEdit.SMenuItem> menuRidDic, Dictionary<int, List<int>> menuGroupMemberDic)
 		{
@@ -181,7 +189,7 @@ namespace ShortMenuLoader
 					smenuItem.m_listMember.Sort((SceneEdit.SMenuItem x, SceneEdit.SMenuItem y) => x.m_strMenuFileName.CompareTo(y.m_strMenuFileName));
 				} else if (keyValuePair.Value == null)
 				{
-					Debug.LogError("A key value in menuGroupMemberDic was nulled. This value was skipped for processing as a result.");
+					Main.logger.LogError("A key value in menuGroupMemberDic was nulled. This value was skipped for processing as a result.");
 				}
 			}
 

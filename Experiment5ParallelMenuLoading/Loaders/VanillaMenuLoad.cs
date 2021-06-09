@@ -46,7 +46,7 @@ namespace ShortMenuLoader
 				{
 					if (Retry < 3)
 					{
-						Debug.LogWarning($"There was an error while attempting to load the vanilla cache: \n{cacheLoader.Exception.InnerException.Message}\n{cacheLoader.Exception.InnerException.StackTrace}\n\nAn attempt will be made to restart the load task...");
+						Main.logger.LogError($"There was an error while attempting to load the vanilla cache: \n{cacheLoader.Exception.InnerException.Message}\n{cacheLoader.Exception.InnerException.StackTrace}\n\nAn attempt will be made to restart the load task...");
 
 						yield return new WaitForSecondsRealtime(5);
 
@@ -56,7 +56,7 @@ namespace ShortMenuLoader
 					}
 					else
 					{
-						Debug.LogWarning($"There was an error while attempting to load the vanilla cache: \n{cacheLoader.Exception.InnerException.Message}\n{cacheLoader.Exception.InnerException.StackTrace}\n\nThis is the 4th attempt to kickstart the task. Cache will be deleted and rebuilt next time.");
+						Main.logger.LogError($"There was an error while attempting to load the vanilla cache: \n{cacheLoader.Exception.InnerException.Message}\n{cacheLoader.Exception.InnerException.StackTrace}\n\nThis is the 4th attempt to kickstart the task. Cache will be deleted and rebuilt next time.");
 
 						MenuCache = new Dictionary<string, MenuStub>();
 
@@ -82,7 +82,7 @@ namespace ShortMenuLoader
 
 					File.WriteAllText(BepInEx.Paths.ConfigPath + "\\" + CacheFileName, JsonConvert.SerializeObject(MenuCache));
 
-					Debug.Log("Finished cleaning and saving the mod cache...");
+					Main.logger.LogInfo("Finished cleaning and saving the mod cache...");
 				}));
 
 				while (cacheSaver.IsCompleted == false)
@@ -94,7 +94,7 @@ namespace ShortMenuLoader
 				{
 					if (Retry < 3)
 					{
-						Debug.LogWarning($"Cache saver task failed due to an unexpected error! This is considered a minor failure: {cacheSaver.Exception.InnerException.Message}\n{cacheSaver.Exception.InnerException.StackTrace}\n\nAn attempt will be made to restart the task again...");
+						Main.logger.LogError($"Cache saver task failed due to an unexpected error! This is considered a minor failure: {cacheSaver.Exception.InnerException.Message}\n{cacheSaver.Exception.InnerException.StackTrace}\n\nAn attempt will be made to restart the task again...");
 
 						yield return new WaitForSecondsRealtime(5);
 
@@ -102,7 +102,9 @@ namespace ShortMenuLoader
 					}
 					else
 					{
-						Debug.LogWarning($"Cache saver task failed due to an unexpected error! This is considered a minor failure: {cacheSaver.Exception.InnerException.Message}\n{cacheSaver.Exception.InnerException.StackTrace}\n\nNo further attempts will be made to start the task again...");
+						Main.logger.LogFatal($"Cache saver task failed due to an unexpected error! This is considered a minor failure: {cacheSaver.Exception.InnerException.Message}\n{cacheSaver.Exception.InnerException.StackTrace}\n\nNo further attempts will be made to start the task again...");
+
+						throw cacheSaver.Exception.InnerException;
 					}
 				}
 			}
@@ -184,14 +186,14 @@ namespace ShortMenuLoader
 						}
 						else
 						{
-							Debug.LogWarning("GameData folder was changed! We'll be wiping the vanilla cache clean and rebuilding it now.");
+							Main.logger.LogWarning("GameData folder was changed! We'll be wiping the vanilla cache clean and rebuilding it now.");
 							MenuCache = new Dictionary<string, MenuStub>();
 						}
 					}
 
 					if (string.IsNullOrEmpty(mi.m_strMenuName))
 					{
-						//Debug.Log($"Loading {mi.m_strMenuFileName} from the database as it wasn't in cache...");
+						//Main.logger.LogInfo($"Loading {mi.m_strMenuFileName} from the database as it wasn't in cache...");
 						VanillaMenuLoad.ReadMenuItemDataFromNative(mi, filesToLoadFromDatabase[mi], out iconFileName);
 					}
 
@@ -211,11 +213,11 @@ namespace ShortMenuLoader
 				}
 				catch (Exception ex)
 				{
-					Debug.LogError(string.Concat(new string[]
+					Main.logger.LogError(string.Concat(new string[]
 					{
-					"ReadMenuItemDataFromNative 例外／",
+					"ReadMenuItemDataFromNative Exception(例外):",
 					mi.m_strMenuFileName,
-					"／",
+					"\n\n",
 					ex.Message,
 					" StackTrace／",
 					ex.StackTrace
@@ -257,7 +259,7 @@ namespace ShortMenuLoader
 							};
 					}
 
-					if (0.5f < Time.realtimeSinceStartup - Main.time)
+					if (Main.BreakInterval.Value < Time.realtimeSinceStartup - Main.time)
 					{
 						yield return null;
 						Main.time = Time.realtimeSinceStartup;
@@ -266,7 +268,7 @@ namespace ShortMenuLoader
 			}
 
 			Main.ThreadsDone++;
-			Debug.Log($"Vanilla menus finished loading at: {Main.WatchOverall.Elapsed}. We also spent {waitOnKiss.Elapsed} waiting for an unmodified database to finish loading...");
+			Main.logger.LogInfo($"Vanilla menus finished loading at: {Main.WatchOverall.Elapsed}. We also spent {waitOnKiss.Elapsed} waiting for an unmodified database to finish loading...");
 
 			Main.@this.StartCoroutine(SaveCache(filesToLoad));
 		}
@@ -304,7 +306,6 @@ namespace ShortMenuLoader
 					Icon = iconStr,
 					DateModified = File.GetLastWriteTimeUtc(BepInEx.Paths.GameRootPath + "\\GameData\\paths.dat")
 				};
-
 				MenuCache[mi.m_strMenuFileName] = newStub;
 			}
 		}

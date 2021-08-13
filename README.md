@@ -7,6 +7,10 @@ In testing, this plugin has managed to cut the load times for some users by as m
 
 I want to clarify that users who already have QuickEditStart and/or CacheEditMenu may not notice a huge improvement. But there should still be some improvement(usually a few seconds) and SML offers tweaks and a smart cache you won't get with those two plugins. All text here is written within the context of vanilla speeds.
 
+Here I'll copy paste the diagram used for SMVD since it also pertains to SML. It may grant users a better understanding of how SML operates.
+
+![image](https://user-images.githubusercontent.com/29824718/129419550-56d1cf43-3260-485b-a4e2-97a0dedd1a44.png)
+
 ## Highlights
 - Self-correcting smart cache: Caches mods intelligently and uses it when it is available. Corrects itself when a mod is modified, deleted or added. This allows users with weaker computers to still attain fast speeds with no overhead.
 - Multi-threading: Uses threads to do several load tasks in order to finish faster while causing your game no lag. Combined with Coroutines, it creates a faux async-await.
@@ -16,7 +20,7 @@ I want to clarify that users who already have QuickEditStart and/or CacheEditMen
 
 ## Cons
 Changes this big bring some downsides. Luckily, this one has few.
-- Errors may hide: Some errors with menu files will not show anymore on your console. This is due to the multi-threading. However, they may still be available to see. You do need to locate and view your `output_log.txt` to do so though.
+- ~~Errors may hide: Some errors with menu files will not show anymore on your console. This is due to the multi-threading. However, they may still be available to see. You do need to locate and view your `output_log.txt` to do so though.~~ Corrected sorta. Logging now works properly.
 - Compatibility: Changes this large have some compatibility issues with other plugins of a similar nature or that hook into modified functions. Luckily not many plugins do.
 
 ## Usage

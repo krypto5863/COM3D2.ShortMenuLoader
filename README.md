@@ -16,7 +16,7 @@ I want to clarify that users who already have QuickEditStart and/or CacheEditMen
 
 ## Cons
 Changes this big bring some downsides. Luckily, this one has few.
-- Errors may hide: Some errors with menu files will not show anymore on your console. This is due to the multi-threading. However, they may still be available to see. You do need to locate and view your `output_log.txt` to do so though.
+- ~~Errors may hide: Some errors with menu files will not show anymore on your console. This is due to the multi-threading. However, they may still be available to see. You do need to locate and view your `output_log.txt` to do so though.~~ Corrected sorta. Logging now works properly.
 - Compatibility: Changes this large have some compatibility issues with other plugins of a similar nature or that hook into modified functions. Luckily not many plugins do.
 
 ## Usage

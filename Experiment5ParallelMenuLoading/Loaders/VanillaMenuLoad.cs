@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Newtonsoft.Json;
+using ShortMenuVanillaDatabase;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -23,7 +24,7 @@ namespace ShortMenuLoader
 		{
 			CacheLoadDone = false;
 
-			if (Main.UseVanillaCache.Value)
+			if (!Main.SMVDLoaded && Main.UseVanillaCache.Value)
 			{
 				Task cacheLoader = Task.Factory.StartNew(new Action(() =>
 				{
@@ -68,7 +69,7 @@ namespace ShortMenuLoader
 		}
 		public static IEnumerator SaveCache(Dictionary<SceneEdit.SMenuItem, string> filesToLoad, int Retry = 0)
 		{
-			if (Main.UseVanillaCache.Value)
+			if (!Main.SMVDLoaded && Main.UseVanillaCache.Value)
 			{
 				Task cacheSaver = Task.Factory.StartNew(new Action(() =>
 				{
@@ -111,7 +112,6 @@ namespace ShortMenuLoader
 		}
 		public static IEnumerator VanillaMenuLoadStart(List<SceneEdit.SMenuItem> menuList, Dictionary<int, List<int>> menuGroupMemberDic)
 		{
-
 			Dictionary<SceneEdit.SMenuItem, int> filesToLoadFromDatabase = new Dictionary<SceneEdit.SMenuItem, int>();
 			Dictionary<SceneEdit.SMenuItem, string> filesToLoad = new Dictionary<SceneEdit.SMenuItem, string>();
 
@@ -126,6 +126,8 @@ namespace ShortMenuLoader
 			Stopwatch waitOnKiss = new Stopwatch();
 			waitOnKiss.Start();
 
+			//var LastDateModified = File.GetLastWriteTime(BepInEx.Paths.GameRootPath + "\\GameData\\paths.dat");
+
 			while (!menuDataBase.JobFinished())
 			{
 				yield return null;
@@ -133,23 +135,44 @@ namespace ShortMenuLoader
 
 			waitOnKiss.Stop();
 
-			int fileCount = menuDataBase.GetDataSize();
-
 			//This entire for loop is what loads in normal game menus. It's been left relatively untouched.
-			for (int i = 0; i < fileCount; i++)
-			{
-				menuDataBase.SetIndex(i);
-				string fileName = menuDataBase.GetMenuFileName();
 
-				if (GameMain.Instance.CharacterMgr.status.IsHavePartsItem(fileName))
+			if (!Main.SMVDLoaded) {
+
+				int fileCount = menuDataBase.GetDataSize();
+
+				for (int i = 0; i < fileCount; i++)
 				{
-					SceneEdit.SMenuItem mi = new SceneEdit.SMenuItem
-					{
-						m_strMenuFileName = fileName,
-						m_nMenuFileRID = fileName.GetHashCode()
-					};
+					menuDataBase.SetIndex(i);
+					string fileName = menuDataBase.GetMenuFileName();
 
-					filesToLoadFromDatabase[mi] = i;
+					if (GameMain.Instance.CharacterMgr.status.IsHavePartsItem(fileName))
+					{
+						SceneEdit.SMenuItem mi = new SceneEdit.SMenuItem
+						{
+							m_strMenuFileName = fileName,
+							m_nMenuFileRID = fileName.GetHashCode()
+						};
+
+						filesToLoadFromDatabase[mi] = i;
+					}
+				}
+			} else 
+			{
+				foreach (KeyValuePair<int, CacheFile.MenuStub> menu in ShortMenuVanillaDatabase.Main.Database.MenusList)
+				{
+					string fileName = menu.Value.FileName;
+
+					if (GameMain.Instance.CharacterMgr.status.IsHavePartsItem(fileName))
+					{
+						SceneEdit.SMenuItem mi = new SceneEdit.SMenuItem
+						{
+							m_strMenuFileName = fileName,
+							m_nMenuFileRID = fileName.GetHashCode()
+						};
+
+						filesToLoadFromDatabase[mi] = menu.Key;
+					}
 				}
 			}
 
@@ -268,45 +291,77 @@ namespace ShortMenuLoader
 			}
 
 			Main.ThreadsDone++;
-			Main.logger.LogInfo($"Vanilla menus finished loading at: {Main.WatchOverall.Elapsed}. We also spent {waitOnKiss.Elapsed} waiting for an unmodified database to finish loading...");
+			Main.logger.LogInfo($"Vanilla menus finished loading at: {Main.WatchOverall.Elapsed}. " 
+			+ ((Main.SMVDLoaded == false) ? 
+			$"We also spent {waitOnKiss.Elapsed} waiting for an unmodified database to finish loading..." 
+			: $"We also spent {waitOnKiss.Elapsed} waiting for SMVD's Database to load..."));
 
 			Main.@this.StartCoroutine(SaveCache(filesToLoad));
 		}
 		public static void ReadMenuItemDataFromNative(SceneEdit.SMenuItem mi, int menuDataBaseIndex, out string iconStr)
 		{
-			MenuDataBase menuDataBase = GameMain.Instance.MenuDataBase;
-			menuDataBase.SetIndex(menuDataBaseIndex);
-			mi.m_strMenuName = menuDataBase.GetMenuName();
-			mi.m_strInfo = menuDataBase.GetItemInfoText();
-			mi.m_mpn = (MPN)menuDataBase.GetCategoryMpn();
-			mi.m_strCateName = menuDataBase.GetCategoryMpnText();
-			mi.m_eColorSetMPN = (MPN)menuDataBase.GetColorSetMpn();
-			mi.m_strMenuNameInColorSet = menuDataBase.GetMenuNameInColorSet();
-			mi.m_pcMultiColorID = (MaidParts.PARTS_COLOR)menuDataBase.GetMultiColorId();
-			mi.m_boDelOnly = menuDataBase.GetBoDelOnly();
-			mi.m_fPriority = menuDataBase.GetPriority();
-			mi.m_bMan = menuDataBase.GetIsMan();
-			mi.m_bOld = (menuDataBase.GetVersion() < 2000);
-			iconStr = menuDataBase.GetIconS();
-
-			if (Main.UseVanillaCache.Value)
+			if (!Main.SMVDLoaded)
 			{
-				MenuStub newStub = new MenuStub()
+				MenuDataBase menuDataBase = GameMain.Instance.MenuDataBase;
+				menuDataBase.SetIndex(menuDataBaseIndex);
+				mi.m_strMenuName = menuDataBase.GetMenuName();
+				mi.m_strInfo = menuDataBase.GetItemInfoText();
+				mi.m_mpn = (MPN)menuDataBase.GetCategoryMpn();
+				mi.m_strCateName = menuDataBase.GetCategoryMpnText();
+				mi.m_eColorSetMPN = (MPN)menuDataBase.GetColorSetMpn();
+				mi.m_strMenuNameInColorSet = menuDataBase.GetMenuNameInColorSet();
+				mi.m_pcMultiColorID = (MaidParts.PARTS_COLOR)menuDataBase.GetMultiColorId();
+				mi.m_boDelOnly = menuDataBase.GetBoDelOnly();
+				mi.m_fPriority = menuDataBase.GetPriority();
+				mi.m_bMan = menuDataBase.GetIsMan();
+				mi.m_bOld = (menuDataBase.GetVersion() < 2000);
+				iconStr = menuDataBase.GetIconS();
+
+				if (Main.UseVanillaCache.Value)
 				{
-					Name = mi.m_strMenuName,
-					Description = mi.m_strInfo,
-					Category = mi.m_mpn.ToString(),
-					ColorSetMPN = mi.m_eColorSetMPN.ToString(),
-					ColorSetMenu = mi.m_strMenuNameInColorSet,
-					MultiColorID = mi.m_pcMultiColorID.ToString(),
-					DelMenu = mi.m_boDelOnly,
-					Priority = mi.m_fPriority,
-					ManMenu = mi.m_bMan,
-					LegacyMenu = mi.m_bOld,
-					Icon = iconStr,
-					DateModified = File.GetLastWriteTimeUtc(BepInEx.Paths.GameRootPath + "\\GameData\\paths.dat")
-				};
-				MenuCache[mi.m_strMenuFileName] = newStub;
+					MenuStub newStub = new MenuStub()
+					{
+						Name = mi.m_strMenuName,
+						Description = mi.m_strInfo,
+						Category = mi.m_mpn.ToString(),
+						ColorSetMPN = mi.m_eColorSetMPN.ToString(),
+						ColorSetMenu = mi.m_strMenuNameInColorSet,
+						MultiColorID = mi.m_pcMultiColorID.ToString(),
+						DelMenu = mi.m_boDelOnly,
+						Priority = mi.m_fPriority,
+						ManMenu = mi.m_bMan,
+						LegacyMenu = mi.m_bOld,
+						Icon = iconStr,
+						DateModified = File.GetLastWriteTimeUtc(BepInEx.Paths.GameRootPath + "\\GameData\\paths.dat")
+					};
+					MenuCache[mi.m_strMenuFileName] = newStub;
+				}
+
+				if (Main.PutMenuFileNameInItemDescription.Value)
+				{
+					mi.m_strInfo = mi.m_strInfo + $"\n\n{menuDataBase.GetMenuFileName()}";
+				}
+			}
+			else
+			{
+				var menuDataBase = ShortMenuVanillaDatabase.Main.Database.MenusList;
+				mi.m_strMenuName = menuDataBase[menuDataBaseIndex].Name;
+				mi.m_strInfo = menuDataBase[menuDataBaseIndex].Description;
+				mi.m_mpn = menuDataBase[menuDataBaseIndex].Category;
+				mi.m_strCateName = menuDataBase[menuDataBaseIndex].Category.ToString();
+				mi.m_eColorSetMPN = menuDataBase[menuDataBaseIndex].ColorSetMPN;
+				mi.m_strMenuNameInColorSet = menuDataBase[menuDataBaseIndex].ColorSetMenu;
+				mi.m_pcMultiColorID = menuDataBase[menuDataBaseIndex].MultiColorID;
+				mi.m_boDelOnly = menuDataBase[menuDataBaseIndex].DelMenu;
+				mi.m_fPriority = menuDataBase[menuDataBaseIndex].Priority;
+				mi.m_bMan = menuDataBase[menuDataBaseIndex].ManMenu;
+				mi.m_bOld = (menuDataBase[menuDataBaseIndex].Version < 2000);
+				iconStr = menuDataBase[menuDataBaseIndex].Icon;
+
+				if (Main.PutMenuFileNameInItemDescription.Value)
+				{
+					mi.m_strInfo = mi.m_strInfo + $"\n\n{menuDataBase[menuDataBaseIndex].FileName}";
+				}
 			}
 		}
 	}

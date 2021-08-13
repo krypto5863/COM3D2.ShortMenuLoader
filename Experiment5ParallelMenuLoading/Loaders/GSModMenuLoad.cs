@@ -22,6 +22,9 @@ namespace ShortMenuLoader
 		private const string CacheFileName = "ShortMenuLoaderCache.json";
 		private static bool CacheLoadDone = false;
 		private static Dictionary<string, MenuStub> MenuCache = new Dictionary<string, MenuStub>();
+
+		private static int MutexTimeoutCounter = 0;
+
 		public static IEnumerator LoadCache(int Retry = 0)
 		{
 
@@ -118,105 +121,211 @@ namespace ShortMenuLoader
 
 			DictionaryBuilt = false;
 
-			Main.logger.LogDebug("Started worker...");
+
+			var cts = new CancellationTokenSource();
+			var token = cts.Token;
 
 			Task loaderWorker = Task.Factory.StartNew(new Action(() =>
-			{
-
-				foreach (string s in Directory.GetFiles(path + "\\Mod", "*.menu", SearchOption.AllDirectories))
 				{
-					if (!FilesDictionary.ContainsKey(Path.GetFileName(s).ToLower()))
+
+					foreach (string s in Directory.GetFiles(path + "\\Mod", "*.menu", SearchOption.AllDirectories))
 					{
-						FilesDictionary[Path.GetFileName(s).ToLower()] = s;
-					}
-					else
-					{
-						listOfDuplicates.Add(s);
-					}
-				}
-
-				Main.logger.LogDebug("Worker done fetching files...");
-
-				DictionaryBuilt = true;
-
-				while (CacheLoadDone != true)
-				{
-					Thread.Sleep(1);
-				}
-
-				Mutex dicLock = new Mutex();
-
-				Main.logger.LogDebug("Worker started loading menus into memory...");
-
-				Task servant = Task.Factory.StartNew(new Action(() =>
-				{
-					foreach (string s in FilesDictionary.Keys)
-					{
-						try
+						if (!FilesDictionary.ContainsKey(Path.GetFileName(s).ToLower()))
 						{
-							if (MenuCache.ContainsKey(s.ToLower()))
+							FilesDictionary[Path.GetFileName(s).ToLower()] = s;
+						}
+						else
+						{
+							listOfDuplicates.Add(s);
+						}
+					}
+
+					DictionaryBuilt = true;
+
+					while (CacheLoadDone != true)
+					{
+						Thread.Sleep(1);
+					}
+
+					Mutex dicLock = new Mutex();
+
+					Task servant = Task.Factory.StartNew(new Action(() =>
+					{
+
+						foreach (string s in FilesDictionary.Keys)
+						{
+							try
 							{
-								dicLock.WaitOne();
-								FilesToRead[s.ToLower()] = null;
+								if (MenuCache.ContainsKey(s.ToLower()))
+								{
+									if (dicLock.WaitOne(500))
+									{
+										try
+										{
+											FilesToRead[s.ToLower()] = null;
+										}
+										finally
+										{
+											dicLock.ReleaseMutex();
+										}
+									}
+									else
+									{
+										Main.logger.LogError($"Timed out waiting for mutex to allow entry...");
+										cts.Cancel();
+										token.ThrowIfCancellationRequested();
+									}
+								}
+								else
+								{
+									if (dicLock.WaitOne(500))
+									{
+										try
+										{
+											FilesToRead[s.ToLower()] = new MemoryStream(File.ReadAllBytes(FilesDictionary[s]));
+										}
+										finally
+										{
+											dicLock.ReleaseMutex();
+										}
+									}
+									else
+									{
+										Main.logger.LogError($"Timed out waiting for mutex to allow entry...");
+										cts.Cancel();
+										token.ThrowIfCancellationRequested();
+									}
+								}
+							}
+							catch
+							{
+								token.ThrowIfCancellationRequested();
+
+								if (dicLock.WaitOne(500))
+								{
+									try
+									{
+										FilesToRead[s.ToLower()] = null;
+									}
+									finally
+									{
+										dicLock.ReleaseMutex();
+									}
+								}
+								else
+								{
+									Main.logger.LogError($"Timed out waiting for mutex to allow entry...");
+									cts.Cancel();
+									token.ThrowIfCancellationRequested();
+								}
+							} 
+						}
+						Main.logger.LogDebug($"Menu memory loader is finished!");
+					}), token);
+
+					while (servant.IsCanceled == false && (servant.IsCompleted == false || FilesToRead.Count > 0))
+					{
+						if (FilesToRead.Count == 0)
+						{
+							Thread.Sleep(3);
+							continue;
+						}
+
+						string strFileName = "";
+
+						if (servant.IsCompleted)
+						{
+							strFileName = FilesToRead.FirstOrDefault().Key;
+						}
+						else if (dicLock.WaitOne(500))
+						{
+							try
+							{
+								strFileName = FilesToRead.FirstOrDefault().Key;
+							}
+							finally 
+							{
 								dicLock.ReleaseMutex();
+							}
+						}
+						else
+						{
+							Main.logger.LogWarning($"Timed out waiting for mutex to allow entry...");
+
+							MutexTimeoutCounter += 1;
+
+							if (MutexTimeoutCounter > 5) {
+								continue;
+							} else 
+							{
+								MutexTimeoutCounter = 0;
+								cts.Cancel();
+								break;
+							}
+						}
+
+						SceneEdit.SMenuItem mi2 = new SceneEdit.SMenuItem();
+					//SceneEdit.GetMenuItemSetUP causes crash if parallel threaded. Our implementation is thread safe-ish.
+					if (GSModMenuLoad.GetMenuItemSetUP(mi2, strFileName, out string iconLoad))
+						{
+							if (iconLoad != null)
+							{
+								listOfLoads.Add(mi2);
+								QuickEdit.idItemDic[mi2.m_nMenuFileRID] = mi2;
+								QuickEdit.texFileIDDic[mi2.m_nMenuFileRID] = iconLoad;
+								mi2.m_texIcon = Texture2D.whiteTexture;
+							}
+						}
+
+						if (servant.IsCompleted)
+						{
+							FilesToRead.Remove(strFileName);
+						}
+						else if (dicLock.WaitOne(500))
+						{
+							try
+							{
+								FilesToRead.Remove(strFileName);
+							}
+							finally
+							{
+								dicLock.ReleaseMutex();
+							}
+						}
+						else
+						{
+							Main.logger.LogWarning($"Timed out waiting for mutex to allow entry...");
+							
+							MutexTimeoutCounter += 1;
+
+							if (MutexTimeoutCounter > 5)
+							{
+								continue;
 							}
 							else
 							{
-								dicLock.WaitOne();
-								FilesToRead[s.ToLower()] = new MemoryStream(File.ReadAllBytes(FilesDictionary[s]));
-								dicLock.ReleaseMutex();
+								MutexTimeoutCounter = 0;
+								cts.Cancel();
+								break;
 							}
-
-						}
-						catch
-						{
-
-							dicLock.WaitOne();
-							FilesToRead[s.ToLower()] = null;
-							dicLock.ReleaseMutex();
-
 						}
 					}
+
+					if (servant.IsFaulted)
+					{
+						Main.logger.LogError($"Servant task failed due to an unexpected error!");
+
+						throw servant.Exception;
+					}
+					else if(token.IsCancellationRequested)
+					{
+						Main.logger.LogError($"A cancellation request was sent out! This can be due to mutex failures...");
+
+						token.ThrowIfCancellationRequested();
+					}
+
+					Main.logger.LogDebug($"Loader is finished!");
 				}));
-
-				Main.logger.LogDebug("Menu load worker started operating...");
-
-				while (servant.IsCompleted == false || FilesToRead.Count > 0)
-				{
-					if (FilesToRead.Count == 0)
-					{
-						Thread.Sleep(1);
-						continue;
-					}
-
-					dicLock.WaitOne();
-					string strFileName = FilesToRead.FirstOrDefault().Key;
-					dicLock.ReleaseMutex();
-
-					SceneEdit.SMenuItem mi2 = new SceneEdit.SMenuItem();
-					//SceneEdit.GetMenuItemSetUP causes crash if parallel threaded. Our implementation is thread safe-ish.
-					if (GSModMenuLoad.GetMenuItemSetUP(mi2, strFileName, out string iconLoad))
-					{
-						if (iconLoad != null)
-						{
-							listOfLoads.Add(mi2);
-							QuickEdit.idItemDic[mi2.m_nMenuFileRID] = mi2;
-							QuickEdit.texFileIDDic[mi2.m_nMenuFileRID] = iconLoad;
-							mi2.m_texIcon = Texture2D.whiteTexture;
-						}
-					}
-					dicLock.WaitOne();
-					FilesToRead.Remove(strFileName);
-					dicLock.ReleaseMutex();
-				}
-
-				if (servant.IsFaulted)
-				{
-					Main.logger.LogError($"Servant task failed due to an unexpected error!");
-
-					throw servant.Exception;
-				}
-			}));
 
 			//We wait until the manager is not busy because starting work while the manager is busy causes egregious bugs.
 			while (!loaderWorker.IsCompleted || GameMain.Instance.CharacterMgr.IsBusy())
@@ -224,7 +333,7 @@ namespace ShortMenuLoader
 				yield return null;
 			}
 
-			if (loaderWorker.IsFaulted)
+			if (loaderWorker.IsFaulted || loaderWorker.IsCanceled)
 			{
 				Main.logger.LogError($"Worker task failed due to an unexpected error! This is considered a full failure: {loaderWorker.Exception.InnerException.Message}\n{loaderWorker.Exception.InnerException.StackTrace}\n\nwe will try restarting the load task...");
 
@@ -405,6 +514,11 @@ namespace ShortMenuLoader
 						mi.m_bMan = tempStub.ManMenu;
 
 						IconTex = tempStub.Icon;
+
+						if (Main.PutMenuFileNameInItemDescription.Value && !mi.m_strInfo.Contains($"\n\n{f_strMenuFileName}"))
+						{
+							mi.m_strInfo = mi.m_strInfo + $"\n\n{f_strMenuFileName}";
+						}
 
 						return true;
 					}
@@ -674,6 +788,11 @@ namespace ShortMenuLoader
 							}
 						}
 					}
+				}
+
+				if (Main.PutMenuFileNameInItemDescription.Value && !mi.m_strInfo.Contains($"\n\n{f_strMenuFileName}")) 
+				{
+					mi.m_strInfo = mi.m_strInfo + $"\n\n{f_strMenuFileName}";
 				}
 
 				if (!String.IsNullOrEmpty(text5))

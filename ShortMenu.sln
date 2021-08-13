@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShortMenuLoader", "Experiment5ParallelMenuLoading\ShortMenuLoader.csproj", "{03EB691B-85D1-4EDF-8290-EAA206161458}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShortMenuVanillaDatabase", "..\MenuDatabaseReplacer\MenuDatabaseReplacer\ShortMenuVanillaDatabase.csproj", "{345C5AB0-706F-4961-B699-ED95DA7117EA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{03EB691B-85D1-4EDF-8290-EAA206161458}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03EB691B-85D1-4EDF-8290-EAA206161458}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03EB691B-85D1-4EDF-8290-EAA206161458}.Release|Any CPU.Build.0 = Release|Any CPU
+		{345C5AB0-706F-4961-B699-ED95DA7117EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{345C5AB0-706F-4961-B699-ED95DA7117EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{345C5AB0-706F-4961-B699-ED95DA7117EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{345C5AB0-706F-4961-B699-ED95DA7117EA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

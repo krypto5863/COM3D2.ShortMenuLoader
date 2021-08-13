@@ -33,9 +33,15 @@ namespace ShortMenuLoader
 					{
 						try
 						{
-							dicLock.WaitOne();
-							modFiles[mod] = new MemoryStream(File.ReadAllBytes(mod));
-							dicLock.ReleaseMutex();
+							if (dicLock.WaitOne(500))
+							{
+								modFiles[mod] = new MemoryStream(File.ReadAllBytes(mod));
+								dicLock.ReleaseMutex();
+							}
+							else 
+							{
+								Main.logger.LogError($"Timed out waiting for mutex to allow entry...");
+							}
 						}
 						catch
 						{
@@ -60,9 +66,19 @@ namespace ShortMenuLoader
 						modIconLoads[mi2] = icon;
 					}
 
-					dicLock.WaitOne();
-					modFiles.Remove(strFileName);
-					dicLock.ReleaseMutex();
+					if (servantWorker.IsCompleted)
+					{
+						modFiles.Remove(strFileName);
+					}
+					else if (dicLock.WaitOne(500))
+					{
+						modFiles.Remove(strFileName);
+						dicLock.ReleaseMutex();
+					} else 
+					{
+						Main.logger.LogWarning($"Timed out waiting for mutex to allow entry...");
+						continue;
+					}
 				}
 
 				if (servantWorker.IsFaulted)
@@ -212,6 +228,11 @@ namespace ShortMenuLoader
 			mi.m_strMenuName = strMenuName;
 			mi.m_strInfo = text4.Replace("《改行》", "\n");
 			mi.m_strCateName = strCateName;
+
+			if (Main.PutMenuFileNameInItemDescription.Value)
+			{
+				mi.m_strInfo = mi.m_strInfo + $"\n\n{Path.GetFileName(f_strModFileName)}";
+			}
 
 			try
 			{

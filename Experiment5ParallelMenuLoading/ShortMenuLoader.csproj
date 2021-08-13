@@ -36,7 +36,7 @@
       <HintPath>..\..\..\..\Desktop\Meido Assemblies\COM Assemblies\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\Desktop\Meido Assemblies\COM Assemblies\allalone\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\..\Desktop\Meido Assemblies\COM Assemblies\GameOriginal 1.55.4\stubbed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
       <HintPath>..\..\..\..\Desktop\Meido Assemblies\COM Assemblies\Assembly-CSharp-firstpass.dll</HintPath>
@@ -76,6 +76,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\MenuDatabaseReplacer\MenuDatabaseReplacer\ShortMenuVanillaDatabase.csproj">
+      <Project>{345c5ab0-706f-4961-b699-ed95da7117ea}</Project>
+      <Name>ShortMenuVanillaDatabase</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

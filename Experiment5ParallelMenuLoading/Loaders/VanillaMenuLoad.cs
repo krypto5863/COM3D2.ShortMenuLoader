@@ -1,6 +1,5 @@
 ﻿using HarmonyLib;
 using Newtonsoft.Json;
-using ShortMenuVanillaDatabase;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,7 +15,6 @@ namespace ShortMenuLoader
 {
 	internal class VanillaMenuLoad
 	{
-
 		private const string CacheFileName = "ShortMenuLoaderVanillaCache.json";
 		private static bool CacheLoadDone = false;
 		private static Dictionary<string, MenuStub> MenuCache = new Dictionary<string, MenuStub>();
@@ -157,23 +155,9 @@ namespace ShortMenuLoader
 						filesToLoadFromDatabase[mi] = i;
 					}
 				}
-			} else 
+			} else
 			{
-				foreach (KeyValuePair<int, CacheFile.MenuStub> menu in ShortMenuVanillaDatabase.Main.Database.MenusList)
-				{
-					string fileName = menu.Value.FileName;
-
-					if (GameMain.Instance.CharacterMgr.status.IsHavePartsItem(fileName))
-					{
-						SceneEdit.SMenuItem mi = new SceneEdit.SMenuItem
-						{
-							m_strMenuFileName = fileName,
-							m_nMenuFileRID = fileName.GetHashCode()
-						};
-
-						filesToLoadFromDatabase[mi] = menu.Key;
-					}
-				}
+				VanillaMenuLoaderSMVDCompat.LoadFromSMVDDictionary(ref filesToLoadFromDatabase);
 			}
 
 			while (CacheLoadDone != true && Main.UseVanillaCache.Value)
@@ -298,6 +282,7 @@ namespace ShortMenuLoader
 
 			Main.@this.StartCoroutine(SaveCache(filesToLoad));
 		}
+
 		public static void ReadMenuItemDataFromNative(SceneEdit.SMenuItem mi, int menuDataBaseIndex, out string iconStr)
 		{
 			if (!Main.SMVDLoaded)
@@ -344,24 +329,7 @@ namespace ShortMenuLoader
 			}
 			else
 			{
-				var menuDataBase = ShortMenuVanillaDatabase.Main.Database.MenusList;
-				mi.m_strMenuName = menuDataBase[menuDataBaseIndex].Name;
-				mi.m_strInfo = menuDataBase[menuDataBaseIndex].Description;
-				mi.m_mpn = menuDataBase[menuDataBaseIndex].Category;
-				mi.m_strCateName = menuDataBase[menuDataBaseIndex].Category.ToString();
-				mi.m_eColorSetMPN = menuDataBase[menuDataBaseIndex].ColorSetMPN;
-				mi.m_strMenuNameInColorSet = menuDataBase[menuDataBaseIndex].ColorSetMenu;
-				mi.m_pcMultiColorID = menuDataBase[menuDataBaseIndex].MultiColorID;
-				mi.m_boDelOnly = menuDataBase[menuDataBaseIndex].DelMenu;
-				mi.m_fPriority = menuDataBase[menuDataBaseIndex].Priority;
-				mi.m_bMan = menuDataBase[menuDataBaseIndex].ManMenu;
-				mi.m_bOld = (menuDataBase[menuDataBaseIndex].Version < 2000);
-				iconStr = menuDataBase[menuDataBaseIndex].Icon;
-
-				if (Main.PutMenuFileNameInItemDescription.Value)
-				{
-					mi.m_strInfo = mi.m_strInfo + $"\n\n{menuDataBase[menuDataBaseIndex].FileName}";
-				}
+				VanillaMenuLoaderSMVDCompat.ReadMenuItemDataFromNative(mi, menuDataBaseIndex, out iconStr);
 			}
 		}
 	}

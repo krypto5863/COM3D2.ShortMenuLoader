@@ -64,6 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Loaders\GSModMenuLoad.cs" />
+    <Compile Include="Loaders\VanillaMenuLoaderSMVDCompat.cs" />
     <Compile Include="MenuStub.cs" />
     <Compile Include="Loaders\ModMenuLoad.cs" />
     <Compile Include="QuickEdit.cs" />

@@ -33,12 +33,17 @@ namespace ShortMenuLoader
 					{
 						try
 						{
-							if (dicLock.WaitOne(500))
+							if (dicLock.WaitOne(5000))
 							{
-								modFiles[mod] = new MemoryStream(File.ReadAllBytes(mod));
-								dicLock.ReleaseMutex();
+								try
+								{
+									modFiles[mod] = new MemoryStream(File.ReadAllBytes(mod));
+								} finally 
+								{
+									dicLock.ReleaseMutex();
+								}
 							}
-							else 
+							else
 							{
 								Main.logger.LogError($"Timed out waiting for mutex to allow entry...");
 							}
@@ -70,10 +75,16 @@ namespace ShortMenuLoader
 					{
 						modFiles.Remove(strFileName);
 					}
-					else if (dicLock.WaitOne(500))
+					else if (dicLock.WaitOne(5000))
 					{
-						modFiles.Remove(strFileName);
-						dicLock.ReleaseMutex();
+						try
+						{
+							modFiles.Remove(strFileName);
+						}
+						finally
+						{
+							dicLock.ReleaseMutex();
+						}
 					} else 
 					{
 						Main.logger.LogWarning($"Timed out waiting for mutex to allow entry...");

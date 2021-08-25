@@ -18,7 +18,7 @@ using UnityEngine;
 
 namespace ShortMenuLoader
 {
-	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.4.1")]
+	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.4.2")]
 	[BepInDependency("ShortMenuVanillaDatabase", BepInDependency.DependencyFlags.SoftDependency)]
 	internal class Main : BaseUnityPlugin
 	{

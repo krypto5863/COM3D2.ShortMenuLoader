@@ -158,7 +158,7 @@ namespace ShortMenuLoader
 							{
 								if (MenuCache.ContainsKey(s.ToLower()))
 								{
-									if (dicLock.WaitOne(5000))
+									if (dicLock.WaitOne(Main.TimeoutLimit.Value))
 									{
 										try
 										{
@@ -178,7 +178,7 @@ namespace ShortMenuLoader
 								}
 								else
 								{
-									if (dicLock.WaitOne(5000))
+									if (dicLock.WaitOne(Main.TimeoutLimit.Value))
 									{
 										try
 										{
@@ -201,7 +201,7 @@ namespace ShortMenuLoader
 							{
 								token.ThrowIfCancellationRequested();
 
-								if (dicLock.WaitOne(5000))
+								if (dicLock.WaitOne(Main.TimeoutLimit.Value))
 								{
 									try
 									{
@@ -237,7 +237,7 @@ namespace ShortMenuLoader
 						{
 							strFileName = FilesToRead.FirstOrDefault().Key;
 						}
-						else if (dicLock.WaitOne(5000))
+						else if (dicLock.WaitOne(Main.TimeoutLimit.Value))
 						{
 							try
 							{
@@ -281,7 +281,7 @@ namespace ShortMenuLoader
 						{
 							FilesToRead.Remove(strFileName);
 						}
-						else if (dicLock.WaitOne(5000))
+						else if (dicLock.WaitOne(Main.TimeoutLimit.Value))
 						{
 							try
 							{

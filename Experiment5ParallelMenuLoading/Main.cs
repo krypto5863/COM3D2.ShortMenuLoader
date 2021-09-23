@@ -18,7 +18,7 @@ using UnityEngine;
 
 namespace ShortMenuLoader
 {
-	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.4.2")]
+	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.4.3")]
 	[BepInDependency("ShortMenuVanillaDatabase", BepInDependency.DependencyFlags.SoftDependency)]
 	internal class Main : BaseUnityPlugin
 	{
@@ -33,6 +33,7 @@ namespace ShortMenuLoader
 
 		public static Stopwatch WatchOverall = new Stopwatch();
 		public static ConfigEntry<float> BreakInterval;
+		public static ConfigEntry<int> TimeoutLimit;
 		public static ConfigEntry<bool> UseVanillaCache;
 		public static ConfigEntry<bool> ChangeModPriority;
 		public static ConfigEntry<bool> PutMenuFileNameInItemDescription;
@@ -82,6 +83,8 @@ namespace ShortMenuLoader
 			@this2.StartCoroutine(GSModMenuLoad.LoadCache());
 
 			BreakInterval = Config.Bind("General", "Time Between Breaks in Seconds", 0.5f, "The break interval is the time between each break that the co-routine takes where it returns processing back to the main thread. After one frame, processing is given back to the co-routine. Higher values can help with low-end processing times but can cause instability if set too high. If after all of this you're still confused, leave it alone.");
+
+			TimeoutLimit = Config.Bind("General", "Mutex Timeout Limit", 50000, "The time in milliseconds to wait for a mutex to unlock before declaring it stalled and restarting the work task. Raise this if you're getting erroneous timed out waiting for mutex errors. Higher values are perfectly safe but you'll be waiting around longer if an error really does occur and the mutex never unlocks. Values below the default are not recommended, this can and will cause errors.");
 
 			if (!SMVDLoaded) 
 			{

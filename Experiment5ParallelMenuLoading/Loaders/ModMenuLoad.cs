@@ -33,7 +33,7 @@ namespace ShortMenuLoader
 					{
 						try
 						{
-							if (dicLock.WaitOne(5000))
+							if (dicLock.WaitOne(Main.TimeoutLimit.Value))
 							{
 								try
 								{
@@ -75,7 +75,7 @@ namespace ShortMenuLoader
 					{
 						modFiles.Remove(strFileName);
 					}
-					else if (dicLock.WaitOne(5000))
+					else if (dicLock.WaitOne(Main.TimeoutLimit.Value))
 					{
 						try
 						{

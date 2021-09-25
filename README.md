@@ -34,7 +34,7 @@ The first time you enter edit mode will be when a cache is actually built so it 
 
 Cache is saved to `BepinEx/config`, it can be deleted if you find it has become corrupt or is presenting an issue, which would be odd and rare.
 
-Vanilla menus cache is available but optional as it cannot detect when a menu file has changed, it can only detect a difference in `paths.dat` file timestamps. It is disabled by default in the F1 menu (ConfigurationManager) and in the config file.
+Vanilla menus cache is available but optional as it cannot detect when a menu file has changed, it can only detect a difference in `paths.dat` file timestamps. It is disabled by default in the F1 menu (ConfigurationManager) and in the config file. If you have SMVD, the vanilla cache is disabled completely. SMVD already caches vanilla files, so calling for SMVD to give us a file is better.
 
 An optional feature was recently added that gave mods +10,000 to priority. This forces all mod icons to appear way after vanilla items, giving you a slightly more organized view.
 

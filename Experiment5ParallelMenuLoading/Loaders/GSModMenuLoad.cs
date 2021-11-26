@@ -21,7 +21,7 @@ namespace ShortMenuLoader
 		public static bool DictionaryBuilt = false;
 		private static readonly Dictionary<string, MemoryStream> FilesToRead = new Dictionary<string, MemoryStream>();
 
-		private static readonly string CacheFile = BepInEx.Paths.ConfigPath + "\\ShortMenuLoaderCache.json";
+		private static readonly string CacheFile = BepInEx.Paths.CachePath + "\\ShortMenuLoaderCache.json";
 		private static bool CacheLoadDone = false;
 		private static Dictionary<string, MenuStub> MenuCache = new Dictionary<string, MenuStub>();
 

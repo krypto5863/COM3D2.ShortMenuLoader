@@ -15,7 +15,7 @@ namespace ShortMenuLoader
 {
 	internal class VanillaMenuLoad
 	{
-		private const string CacheFileName = "ShortMenuLoaderVanillaCache.json";
+		private static readonly string CacheFile = BepInEx.Paths.CachePath + "\\ShortMenuLoaderVanillaCache.json";
 		private static bool CacheLoadDone = false;
 		private static Dictionary<string, MenuStub> MenuCache = new Dictionary<string, MenuStub>();
 		public static IEnumerator LoadCache(int Retry = 0)
@@ -26,9 +26,9 @@ namespace ShortMenuLoader
 			{
 				Task cacheLoader = Task.Factory.StartNew(new Action(() =>
 				{
-					if (File.Exists(BepInEx.Paths.ConfigPath + "\\" + CacheFileName))
+					if (File.Exists(CacheFile))
 					{
-						string jsonString = File.ReadAllText(BepInEx.Paths.ConfigPath + "\\" + CacheFileName);
+						string jsonString = File.ReadAllText(CacheFile);
 
 						var tempDic = JsonConvert.DeserializeObject<Dictionary<string, MenuStub>>(jsonString);
 
@@ -59,7 +59,7 @@ namespace ShortMenuLoader
 
 						MenuCache = new Dictionary<string, MenuStub>();
 
-						File.Delete(BepInEx.Paths.ConfigPath + "\\" + CacheFileName);
+						File.Delete(CacheFile);
 					}
 				}
 			}
@@ -79,7 +79,7 @@ namespace ShortMenuLoader
 					)
 					.ToDictionary(t => t.Key, l => l.Value);
 
-					File.WriteAllText(BepInEx.Paths.ConfigPath + "\\" + CacheFileName, JsonConvert.SerializeObject(MenuCache));
+					File.WriteAllText(CacheFile, JsonConvert.SerializeObject(MenuCache));
 
 					Main.logger.LogInfo("Finished cleaning and saving the mod cache...");
 				}));
@@ -207,7 +207,8 @@ namespace ShortMenuLoader
 					filesToLoad[mi] = null;
 
 					if (!string.IsNullOrEmpty(iconFileName) && GameUty.FileSystem.IsExistentFile(iconFileName))
-					{
+					{	
+						/*
 						if (SceneEdit.Instance != null)
 						{
 							SceneEdit.Instance.editItemTextureCache.PreLoadRegister(mi.m_nMenuFileRID, iconFileName);
@@ -216,6 +217,9 @@ namespace ShortMenuLoader
 						{
 							mi.m_texIcon = ImportCM.CreateTexture(iconFileName);
 						}
+						*/
+						//Since Vanilla loader doesn't run threads, it can run just fine on main thread which we've designated as our only thread for adding icons to late loading.
+						QuickEditVanilla.f_RidsToStubs[mi.m_nMenuFileRID] = iconFileName;
 					}
 				}
 				catch (Exception ex)

@@ -11,6 +11,7 @@ using System.Reflection.Emit;
 using System.Security;
 using System.Security.Permissions;
 using System.Text.RegularExpressions;
+using System.Threading;
 using UnityEngine;
 
 [module: UnverifiableCode]
@@ -40,6 +41,12 @@ namespace ShortMenuLoader
 
 		internal static bool SMVDLoaded = false;
 
+		//internal static SemaphoreSlim FileOpened = new SemaphoreSlim(1);
+		//internal static SemaphoreSlim TextureLoadMutex = new SemaphoreSlim(1);
+		//internal static bool LockDownForThreading = false;
+		//internal static bool LockSetFile = false;
+		//internal static bool LockSetTex = false;
+
 		private void Awake()
 		{
 
@@ -68,7 +75,7 @@ namespace ShortMenuLoader
 
 				SMVDLoaded = true;
 			}
-			else 
+			else
 			{
 				Main.logger.LogWarning("SMVD is not loaded! Consider installing ShortMenuVanillaDatabase for even better performance!");
 			}
@@ -76,6 +83,7 @@ namespace ShortMenuLoader
 			MethodBase colorItemSetConstructor = typeof(SceneEdit).GetNestedType("ColorItemSet", BindingFlags.NonPublic).GetConstructor(new Type[] { typeof(GameObject), typeof(SceneEdit.SMenuItem) });
 
 			harmony.PatchAll(typeof(QuickEdit));
+			harmony.PatchAll(typeof(QuickEditVanilla));
 
 			harmony.Patch(menuItemSetConstructor, new HarmonyMethod(typeof(QuickEdit), "MenuItemSet"));
 			harmony.Patch(colorItemSetConstructor, new HarmonyMethod(typeof(QuickEdit), "MenuItemSet"));
@@ -86,7 +94,7 @@ namespace ShortMenuLoader
 
 			TimeoutLimit = Config.Bind("General", "Mutex Timeout Limit", 50000, "The time in milliseconds to wait for a mutex to unlock before declaring it stalled and restarting the work task. Raise this if you're getting erroneous timed out waiting for mutex errors. Higher values are perfectly safe but you'll be waiting around longer if an error really does occur and the mutex never unlocks. Values below the default are not recommended, this can and will cause errors.");
 
-			if (!SMVDLoaded) 
+			if (!SMVDLoaded)
 			{
 				UseVanillaCache = Config.Bind("General", "Use Vanilla Cache", false, "This decides whether a vanilla cache is created, maintained and used on load. Kiss has it's own questionable implementation of a cache, but this cache is questionable in it's own right too. Disabled when you use SMVD.");
 			}
@@ -97,6 +105,72 @@ namespace ShortMenuLoader
 
 			@this2.StartCoroutine(VanillaMenuLoad.LoadCache());
 		}
+		/*
+		[HarmonyPatch(typeof(GameUty), "FileOpen")]
+		[HarmonyPrefix]
+		private static bool LockMutex() 
+		{
+			if (LockDownForThreading)
+			{
+				if (!FileOpened.Wait(5000)) 
+				{
+					Main.logger.LogError("Timed out waiting for the FileOpen mutex to finish!");
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		[HarmonyPatch(typeof(GameUty), "FileOpen")]
+		[HarmonyFinalizer]
+		private static void UnlockMutex()
+		{
+			if (FileOpened.CurrentCount > 0) 
+			{
+				try
+				{
+					FileOpened.Release();
+				}
+				catch 
+				{
+				}
+			}
+		}
+		[HarmonyPatch(typeof(ImportCM), "LoadTexture")]
+		[HarmonyPrefix]
+		private static bool LockMutex1()
+		{
+			if (LockDownForThreading)
+			{
+				if (!TextureLoadMutex.Wait(5000)) 
+				{
+					Main.logger.LogError("Timed out waiting for the LoadTexture mutex to finish!");
+					return false;
+				} 
+			}
+
+			return true;
+		}
+
+		[HarmonyPatch(typeof(ImportCM), "LoadTexture")]
+		[HarmonyFinalizer]
+		private static void UnlockMutex1()
+		{
+
+			if (TextureLoadMutex.CurrentCount > 0)
+			{
+				try
+				{
+					TextureLoadMutex.Release();
+					//Main.logger.LogDebug("Unlocked the texture loader!");
+				}
+				catch 
+				{
+				}
+			}
+		}
+		*/
 		//Slightly out of scope but it serves to accomadate placing menu paths in descriptions. Silly kiss.
 		[HarmonyPatch(typeof(ItemInfoWnd), "Open")]
 		[HarmonyPostfix]
@@ -163,7 +237,13 @@ namespace ShortMenuLoader
 			//We set time so the coroutines to be called can coordinate themselves.
 			time = Time.realtimeSinceStartup;
 
-			AccessTools.Method(typeof(SceneEdit), "InitCategoryList").Invoke(Main.@this, null);
+			//Setting threads back to 0 incase last load had a higher number.
+			ThreadsDone = 0;
+			//Calling it directly after threads are refixed. It'll load the directory in the background while other things load.
+			//Temporarily disabled. It's a wittle buggy.
+			QuickEdit.EngageModPreloader();
+
+			Main.@this.InitCategoryList();
 
 			Main.logger.LogInfo($"Files began loading at: {WatchOverall.Elapsed}");
 
@@ -179,23 +259,22 @@ namespace ShortMenuLoader
 			}
 
 			Main.logger.LogInfo($"All loaders finished at: {WatchOverall.Elapsed}.");
-			//Setting threads back to 0 for next loads.
-			ThreadsDone = 0;
 
 			//Calls the final function to complete setting up menu items.
 			yield return @this.StartCoroutine(Main.FixedInitMenu(menuList, @this.m_menuRidDic, menuGroupMemberDic));
 
 			//Does something...
-			yield return @this.StartCoroutine(AccessTools.Method(typeof(SceneEdit), "CoLoadWait").Invoke(@this, null) as IEnumerator);
+			yield return @this.StartCoroutine(@this.CoLoadWait());
 
 			Main.logger.LogInfo($"Loading completely done at: {WatchOverall.Elapsed}.");
 		}
 		private static IEnumerator FixedInitMenu(List<SceneEdit.SMenuItem> menuList, Dictionary<int, SceneEdit.SMenuItem> menuRidDic, Dictionary<int, List<int>> menuGroupMemberDic)
 		{
+			var watch = Stopwatch.StartNew();
 
 			float time = Time.realtimeSinceStartup;
 
-			List<SceneEdit.SCategory> listCategory = (List<SceneEdit.SCategory>)AccessTools.Field(typeof(SceneEdit), "m_listCategory").GetValue(@this);
+			List<SceneEdit.SCategory> listCategory = @this.m_listCategory;
 
 			foreach (KeyValuePair<int, List<int>> keyValuePair in menuGroupMemberDic)
 			{
@@ -240,6 +319,7 @@ namespace ShortMenuLoader
 			{
 				if (keyValuePair2.Value.m_eType == SceneEditInfo.CCateNameType.EType.Slider)
 				{
+					/*
 					AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(@this, new object[] { new SceneEdit.SMenuItem
 					{
 						m_mpn = keyValuePair2.Key,
@@ -249,8 +329,8 @@ namespace ShortMenuLoader
 						m_requestNewFace = keyValuePair2.Value.m_requestNewFace,
 						m_requestFBFace = keyValuePair2.Value.m_requestFBFace
 					}});
-					/*
-					this.AddMenuItemToList(new SceneEdit.SMenuItem
+					*/
+					@this.AddMenuItemToList(new SceneEdit.SMenuItem
 					{
 						m_mpn = keyValuePair2.Key,
 						m_nSliderValue = 500,
@@ -258,13 +338,14 @@ namespace ShortMenuLoader
 						m_strMenuName = keyValuePair2.Value.m_strBtnPartsTypeName,
 						m_requestNewFace = keyValuePair2.Value.m_requestNewFace,
 						m_requestFBFace = keyValuePair2.Value.m_requestFBFace
-					});*/
+					});
 				}
 			}
 
-			for (int nM = 0; nM < menuList.Count; nM++)
+			//for (int nM = 0; nM < menuList.Count; nM++)
+			foreach(SceneEdit.SMenuItem mi in menuList)
 			{
-				SceneEdit.SMenuItem mi = menuList[nM];
+				//SceneEdit.SMenuItem mi = menuList[nM];
 				if (SceneEditInfo.m_dicPartsTypePair.ContainsKey(mi.m_eColorSetMPN))
 				{
 					if (mi.m_eColorSetMPN != MPN.null_mpn)
@@ -288,16 +369,25 @@ namespace ShortMenuLoader
 				}
 			}
 
-			for (int j = 0; j < listCategory.Count; j++)
+			/*I don't really get why they're running three different loops to process the exact same lists? But we're gonna merge that in to save some looping time.
+			//for (int j = 0; j < listCategory.Count; j++)
+			foreach(SceneEdit.SCategory category in listCategory)
 			{
-				listCategory[j].SortPartsType();
+				category.SortPartsType();
 			}
-			for (int k = 0; k < listCategory.Count; k++)
+
+			//for (int k = 0; k < listCategory.Count; k++)
+			foreach (SceneEdit.SCategory category in listCategory)
 			{
-				listCategory[k].SortItem();
+				category.SortItem();
 			}
+			*/
+
 			foreach (SceneEdit.SCategory scategory in listCategory)
 			{
+				scategory.SortPartsType();
+				scategory.SortItem();
+
 				if (scategory.m_eCategory == SceneEditInfo.EMenuCategory.プリセット || scategory.m_eCategory == SceneEditInfo.EMenuCategory.ランダム || scategory.m_eCategory == SceneEditInfo.EMenuCategory.プロフィ\u30FCル || scategory.m_eCategory == SceneEditInfo.EMenuCategory.着衣設定)
 				{
 					scategory.m_isEnabled = true;
@@ -347,8 +437,11 @@ namespace ShortMenuLoader
 			}
 
 
-			//@this.UpdatePanel_Category();
-			AccessTools.Method(typeof(SceneEdit), "UpdatePanel_Category").Invoke(@this, null);
+			@this.UpdatePanel_Category();
+
+			Main.logger.LogInfo($"FixedInitMenu done in {watch.Elapsed}");
+
+			//AccessTools.Method(typeof(SceneEdit), "UpdatePanel_Category").Invoke(@this, null);
 			yield break;
 		}
 	}

@@ -2,7 +2,7 @@
 
 namespace ShortMenuLoader
 {
-	internal class MenuStub
+	internal struct MenuStub
 	{
 		public string Name { get; set; }
 		public string SourceArc { get; set; }
@@ -17,8 +17,5 @@ namespace ShortMenuLoader
 		public float Priority { get; set; }
 		public bool LegacyMenu { get; set; }
 		public DateTime DateModified { get; set; }
-		public MenuStub()
-		{
-		}
 	}
 }

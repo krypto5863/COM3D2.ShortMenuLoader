@@ -1,112 +1,51 @@
 ﻿using HarmonyLib;
+using Newtonsoft.Json;
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace ShortMenuLoader
 {
-	internal class QuickEdit
+	internal static class QuickEdit
 	{
-		public static Dictionary<int, string> texFileIDDic = new Dictionary<int, string>();
-		public static Dictionary<string, Texture2D> tex2DDic = new Dictionary<string, Texture2D>();
-		public static Dictionary<int, SceneEdit.SMenuItem> idItemDic = new Dictionary<int, SceneEdit.SMenuItem>();
-		private static bool editSceneFlg = false;
-		private static bool nowMenuFlg = false;
-		private static int nowStrMenuFileID;
+		//A cache of files 
+		private static Dictionary<string, string> f_TexInModFolder = null;
 
-		[HarmonyPatch(typeof(SceneEdit), "Start")]
-		[HarmonyPrefix]
-		public static void StartPre()
+		//Will be accessed in a concurrent modality frequently. Locking is slow.
+		internal static Dictionary<int, string> f_RidsToStubs = new Dictionary<int, string>();
+		private static readonly ConcurrentDictionary<string, TextureResource> f_ProcessedTextures = new ConcurrentDictionary<string, TextureResource>();
+
+		//Should only be used in a non-concurrent modality.
+		private static Dictionary<string, Texture2D> f_LoadedTextures = new Dictionary<string, Texture2D>();
+
+		private static IEnumerator f_TextureLoaderCoroute;
+
+		private static bool ModDirScanned = false;
+
+		internal static void EngageModPreloader()
 		{
-			editSceneFlg = true;
-			nowMenuFlg = false;
-			idItemDic = new Dictionary<int, SceneEdit.SMenuItem>();
-		}
-		//[HarmonyPatch(typeof(SceneEdit), "InitMenuItemScript")]
-		//[HarmonyPrefix]
-		public static void InitMenuItemScriptPre(SceneEdit.SMenuItem mi)
-		{
-			if (!editSceneFlg) return;
-
-			nowMenuFlg = true;
-			nowStrMenuFileID = mi.m_nMenuFileRID;
-
-			idItemDic[nowStrMenuFileID] = mi;
-		}
-		//[HarmonyPatch(typeof(SceneEdit), "InitMenuItemScript")]
-		//[HarmonyPostfix]
-		public static void InitMenuItemScriptEnd()
-		{
-			nowMenuFlg = false;
-		}
-
-		[HarmonyPatch(typeof(ImportCM), "CreateTexture", new Type[] { typeof(string) })]
-		[HarmonyPrefix]
-		public static bool CreateTexture(ref string __0, ref Texture2D __result)
-		{
-
-			if (!nowMenuFlg || !editSceneFlg)
+			if (f_TextureLoaderCoroute == null)
 			{
-				return true;
-			}
-
-			nowMenuFlg = false;
-
-			texFileIDDic[nowStrMenuFileID] = __0;
-			Texture2D tempTex = Texture2D.whiteTexture;
-
-			__result = tempTex;
-
-			return false;
-		}
-		[HarmonyPatch(typeof(SceneEdit), "OnCompleteFadeIn")]
-		[HarmonyPrefix]
-		public static void OnCompleteFadeIn()
-		{
-			editSceneFlg = false;
-		}
-
-		public static Texture2D GetTexture(int menuFileID)
-		{
-			string textureFileName = texFileIDDic[menuFileID];
-
-			if (tex2DDic.ContainsKey(textureFileName))
-			{
-				if (tex2DDic[textureFileName] == null)
-				{
-					tex2DDic[textureFileName] = ImportCM.CreateTexture(textureFileName);
-				}
-				return tex2DDic[textureFileName];
-			}
-			else
-			{
-				Texture2D tex2D = ImportCM.CreateTexture(textureFileName);
-				tex2DDic.Add(textureFileName, tex2D);
-				return tex2D;
+				f_TextureLoaderCoroute = TextureLoader();
+				Main.@this.StartCoroutine(f_TextureLoaderCoroute);
 			}
 		}
-
-		[HarmonyPatch(typeof(RandomPresetCtrl), "GetTextureByRid")]
-		[HarmonyPatch(typeof(RandomPresetCtrl), "GetColorTextureByRid")]
-		[HarmonyPrefix]
-		public static void GetTextureByRid(ref int __2)
+		//Despite how it may appear, this is used, it's patched manually in Main.Awake
+		private static void MenuItemSet(ref SceneEdit.SMenuItem __1)
 		{
-			if (idItemDic.ContainsKey(__2))
-			{
-				SceneEdit.SMenuItem tempItem = idItemDic[__2];
-				if (tempItem.m_texIcon == null || tempItem.m_texIcon == Texture2D.whiteTexture)
-				{
-					tempItem.m_texIcon = GetTexture(tempItem.m_nMenuFileRID);
-					tempItem.m_texIconRandomColor = tempItem.m_texIcon;
-				}
-			}
-		}
-		public static void MenuItemSet(ref SceneEdit.SMenuItem __1)
-		{
-			if (!texFileIDDic.ContainsKey(__1.m_nMenuFileRID))
+			if (!f_RidsToStubs.ContainsKey(__1.m_nMenuFileRID))
 			{
 				return;
 			}
+
 			if (__1.m_texIcon == null || __1.m_texIcon == Texture2D.whiteTexture)
 			{
 				try
@@ -121,24 +60,27 @@ namespace ShortMenuLoader
 				}
 			}
 		}
+
+		[HarmonyPatch(typeof(RandomPresetCtrl), "GetTextureByRid")]
+		[HarmonyPatch(typeof(RandomPresetCtrl), "GetColorTextureByRid")]
 		[HarmonyPatch(typeof(CostumePartsEnabledCtrl), "GetTextureByRid")]
 		[HarmonyPrefix]
-		public static void CostumeGetTextureByRid(int __2)
+		private static bool GetTextureByRid(ref Texture2D __result, int __2)
 		{
-			if (idItemDic.ContainsKey(__2))
+			if (f_RidsToStubs.ContainsKey(__2))
 			{
-				SceneEdit.SMenuItem tempItem = idItemDic[__2];
-				if (tempItem.m_texIcon == null || tempItem.m_texIcon == Texture2D.whiteTexture)
-				{
-					tempItem.m_texIcon = GetTexture(tempItem.m_nMenuFileRID);
-					tempItem.m_texIconRandomColor = tempItem.m_texIcon;
-				}
+				__result = GetTexture(__2);
+
+				return false;
 			}
+
+			return true;
 		}
 		[HarmonyPatch(typeof(SceneEditWindow.CustomViewItem), "UpdateIcon")]
 		[HarmonyPrefix]
-		public static void UpdateIcon(ref SceneEditWindow.CustomViewItem __instance, ref Maid __0)
+		private static void UpdateIcon(ref SceneEditWindow.CustomViewItem __instance, Maid __0)
 		{
+
 			if (__0 == null)
 			{
 				__0 = GameMain.Instance.CharacterMgr.GetMaid(0);
@@ -148,10 +90,6 @@ namespace ShortMenuLoader
 					return;
 				}
 			}
-			if (__instance.mpn == MPN.chikubi)
-			{
-				__instance.mpn = MPN.chikubicolor;
-			}
 
 			SceneEdit.SMenuItem menuItem = __instance.GetMenuItem(__0, __instance.mpn);
 
@@ -159,25 +97,221 @@ namespace ShortMenuLoader
 			{
 				//Do Nothing
 			}
-			else if (menuItem.m_texIcon != null)
+			else if (menuItem.m_texIcon == null || menuItem.m_texIcon == Texture2D.whiteTexture)
 			{
-				int rid = menuItem.m_nMenuFileRID;
-				if (idItemDic.ContainsKey(rid))
+				if (f_RidsToStubs.ContainsKey(menuItem.m_nMenuFileRID)) 
 				{
-					SceneEdit.SMenuItem tempItem = idItemDic[rid];
-					if (tempItem.m_texIcon == null || tempItem.m_texIcon == Texture2D.whiteTexture)
+					menuItem.m_texIcon = GetTexture(menuItem.m_nMenuFileRID);
+					menuItem.m_texIconRandomColor = menuItem.m_texIcon;
+				} 
+			}
+		}
+
+		//A helper function to everyone else.
+		private static Texture2D GetTexture(int menuFileID)
+		{
+			string textureFileName;
+
+			if (!f_RidsToStubs.TryGetValue(menuFileID, out textureFileName))
+			{
+				return null;
+			}
+
+			//If texture isn't loaded, load it.
+			if (!f_LoadedTextures.ContainsKey(textureFileName) || f_LoadedTextures[textureFileName] == null)
+			{
+				if (f_ProcessedTextures.ContainsKey(textureFileName) && f_ProcessedTextures[textureFileName] != null)
+				{
+					f_LoadedTextures[textureFileName] = f_ProcessedTextures[textureFileName].CreateTexture2D();
+				}
+				else
+				{
+					Main.logger.LogWarning($"{textureFileName} wasn't loaded so it had to be loaded in manually...");
+
+					if (ModDirScanned)
 					{
-						tempItem.m_texIcon = GetTexture(tempItem.m_nMenuFileRID);
-						tempItem.m_texIconRandomColor = tempItem.m_texIcon;
+						var fetchedResource = LoadTextureFromModFolder(textureFileName);
+
+						if (fetchedResource != null)
+						{
+							Main.logger.LogWarning($"{textureFileName} Loaded from mod folder...");
+							f_LoadedTextures[textureFileName] = fetchedResource.CreateTexture2D();
+						}
+					}
+
+					if (!f_LoadedTextures.ContainsKey(textureFileName) || f_LoadedTextures[textureFileName] == null)
+					{
+						Main.logger.LogWarning($"{textureFileName} Isn't in the mod folder, loading from game system...");
+
+						f_LoadedTextures[textureFileName] = ImportCM.CreateTexture(textureFileName);
 					}
 				}
 			}
 
-			if (__instance.mpn == MPN.chikubicolor)
+			f_ProcessedTextures.TryRemove(textureFileName, out _);
+			return f_LoadedTextures[textureFileName];
+		}
+
+		private static IEnumerator TextureLoader()
+		{
+			var watch1 = Stopwatch.StartNew();
+
+			int MaxThreadsToSpawn = 4;
+
+			Task loaderWorker = Task.Factory.StartNew(new Action(() =>
 			{
-				__instance.mpn = MPN.chikubi;
+				if (f_TexInModFolder == null)
+				{
+					f_TexInModFolder = new Dictionary<string, string>();
+
+					foreach (string s in Directory.GetFiles(BepInEx.Paths.GameRootPath + "\\Mod", "*.tex", SearchOption.AllDirectories))
+					{
+						if (!f_TexInModFolder.ContainsKey(Path.GetFileName(s).ToLower()))
+						{
+							f_TexInModFolder[Path.GetFileName(s).ToLower()] = s;
+						}
+					}
+
+					ModDirScanned = true;
+					Main.logger.LogInfo($"Done Scanning Mod Dir @ {watch1.Elapsed}");
+				}
+
+				int filesLoadedCount = 0;
+
+				while (Main.ThreadsDone < 3)
+				{
+					Thread.Sleep(3000);
+				}
+
+				var watch2 = Stopwatch.StartNew();
+
+				var modQueue = new ConcurrentQueue<string>(f_RidsToStubs.Values.Where(val =>  !f_ProcessedTextures.ContainsKey(val) && !f_LoadedTextures.ContainsKey(val)));
+
+				//Main.LockDownForThreading = true;
+
+				Parallel.For(0, modQueue.Count, new ParallelOptions { MaxDegreeOfParallelism = MaxThreadsToSpawn }, (count, state) =>
+				{
+					if (modQueue.Count > 0 && modQueue.TryDequeue(out var key))
+					{
+						var loadedTex = LoadTextureFromModFolder(key);
+
+						if (loadedTex != null)
+						{
+							++filesLoadedCount;
+							f_ProcessedTextures[key] = loadedTex;
+						}/*
+						else
+						{
+							loadedTex = ImportCM.LoadTexture(GameUty.FileSystem, key, false);
+
+							if (loadedTex != null)
+							{
+								++filesLoadedCount;
+								f_ProcessedTextures[key] = loadedTex;
+							}
+						}*/
+					}
+					else
+					{
+						if (Main.ThreadsDone >= 3 && modQueue.Count <= 0)
+						{
+							state.Break();
+						}
+
+						return;
+					}
+				});
+
+				//Main.LockDownForThreading = false;
+
+				watch2.Stop();
+				watch1.Stop();
+
+				Main.logger.LogInfo($"Mod Icon Preloader Done @ {watch1.Elapsed}\n" +
+				$"\nWorked for {watch2.Elapsed}\n" +
+				$"In total loaded {filesLoadedCount} mod files...\n");
+			}));
+
+			while (!loaderWorker.IsCompleted && !loaderWorker.IsFaulted)
+			{
+				yield return new WaitForSecondsRealtime(2);
 			}
-			return;
+
+			if (loaderWorker.IsFaulted)
+			{
+				Main.logger.LogError("The texture loader thread ran into an issue with the following exception:\n");
+				throw loaderWorker.Exception.InnerException;
+			}
+
+			//QuickEditVanilla.EngageVanillaPreloader();
+		}
+
+		public static TextureResource LoadTextureFromModFolder(string f_strFileName)
+		{
+			if (!f_TexInModFolder.TryGetValue(f_strFileName.ToLower(), out var fullPathToFile))
+			{
+				//Main.logger.LogWarning($"Couldn't find {f_strFileName} in mods folder...");
+				return null;
+			}
+
+			try
+			{
+				BinaryReader binaryReader = new BinaryReader(new FileStream(fullPathToFile, FileMode.Open), Encoding.UTF8);
+
+				string text = binaryReader.ReadString();
+				if (text != "CM3D2_TEX")
+				{
+					return null;
+				}
+				int num = binaryReader.ReadInt32();
+				string text2 = binaryReader.ReadString();
+				int width = 0;
+				int height = 0;
+				TextureFormat textureFormat = (TextureFormat)5;
+				Rect[] array = null;
+				if (1010 <= num)
+				{
+					if (1011 <= num)
+					{
+						int num2 = binaryReader.ReadInt32();
+						if (0 < num2)
+						{
+							array = new Rect[num2];
+							for (int i = 0; i < num2; i++)
+							{
+								float num3 = binaryReader.ReadSingle();
+								float num4 = binaryReader.ReadSingle();
+								float num5 = binaryReader.ReadSingle();
+								float num6 = binaryReader.ReadSingle();
+								array[i] = new Rect(num3, num4, num5, num6);
+							}
+						}
+					}
+					width = binaryReader.ReadInt32();
+					height = binaryReader.ReadInt32();
+					textureFormat = (TextureFormat)binaryReader.ReadInt32();
+				}
+
+				int num7 = binaryReader.ReadInt32();
+				byte[] array2;
+
+				array2 = new byte[num7];
+				binaryReader.Read(array2, 0, num7);
+
+				if (num == 1000)
+				{
+					width = ((int)array2[16] << 24 | (int)array2[17] << 16 | (int)array2[18] << 8 | (int)array2[19]);
+					height = ((int)array2[20] << 24 | (int)array2[21] << 16 | (int)array2[22] << 8 | (int)array2[23]);
+				}
+
+				binaryReader.Close();
+
+				return new TextureResource(width, height, textureFormat, array, array2);
+			}
+			catch
+			{
+				return null;
+			}
 		}
 	}
 }

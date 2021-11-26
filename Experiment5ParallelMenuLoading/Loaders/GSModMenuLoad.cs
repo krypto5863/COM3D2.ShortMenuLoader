@@ -3,12 +3,14 @@ using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using TMonitor = System.Threading.Monitor;
 using UnityEngine;
 
 namespace ShortMenuLoader
@@ -19,7 +21,7 @@ namespace ShortMenuLoader
 		public static bool DictionaryBuilt = false;
 		private static readonly Dictionary<string, MemoryStream> FilesToRead = new Dictionary<string, MemoryStream>();
 
-		private const string CacheFileName = "ShortMenuLoaderCache.json";
+		private static readonly string CacheFile = BepInEx.Paths.ConfigPath + "\\ShortMenuLoaderCache.json";
 		private static bool CacheLoadDone = false;
 		private static Dictionary<string, MenuStub> MenuCache = new Dictionary<string, MenuStub>();
 
@@ -32,9 +34,9 @@ namespace ShortMenuLoader
 
 			Task cacheLoader = Task.Factory.StartNew(new Action(() =>
 			{
-				if (File.Exists(BepInEx.Paths.ConfigPath + "\\" + CacheFileName))
+				if (File.Exists(CacheFile))
 				{
-					string jsonString = File.ReadAllText(BepInEx.Paths.ConfigPath + "\\" + CacheFileName);
+					string jsonString = File.ReadAllText(CacheFile);
 
 					var tempDic = JsonConvert.DeserializeObject<Dictionary<string, MenuStub>>(jsonString);
 
@@ -65,7 +67,7 @@ namespace ShortMenuLoader
 
 					MenuCache = new Dictionary<string, MenuStub>();
 
-					File.Delete(BepInEx.Paths.ConfigPath + "\\" + CacheFileName);
+					File.Delete(CacheFile);
 
 					CacheLoadDone = true;
 				}
@@ -79,7 +81,7 @@ namespace ShortMenuLoader
 				.Where(k => FilesDictionary.Keys.Contains(k.Key))
 				.ToDictionary(t => t.Key, l => l.Value);
 
-				File.WriteAllText(BepInEx.Paths.ConfigPath + "\\" + CacheFileName, JsonConvert.SerializeObject(MenuCache));
+				File.WriteAllText(CacheFile, JsonConvert.SerializeObject(MenuCache));
 
 				Main.logger.LogDebug("Finished cleaning and saving the mod cache...");
 			}));
@@ -127,6 +129,7 @@ namespace ShortMenuLoader
 
 			Task loaderWorker = Task.Factory.StartNew(new Action(() =>
 				{
+					//var watch1 = Stopwatch.StartNew();
 
 					foreach (string s in Directory.GetFiles(path + "\\Mod", "*.menu", SearchOption.AllDirectories))
 					{
@@ -140,6 +143,8 @@ namespace ShortMenuLoader
 						}
 					}
 
+					//watch1.Stop();
+
 					DictionaryBuilt = true;
 
 					while (CacheLoadDone != true)
@@ -147,18 +152,17 @@ namespace ShortMenuLoader
 						Thread.Sleep(1);
 					}
 
-					Mutex dicLock = new Mutex();
+					//Mutex dicLock = new Mutex();
 
 					Task servant = Task.Factory.StartNew(new Action(() =>
 					{
-
 						foreach (string s in FilesDictionary.Keys)
 						{
 							try
 							{
 								if (MenuCache.ContainsKey(s.ToLower()))
 								{
-									if (dicLock.WaitOne(Main.TimeoutLimit.Value))
+									if (TMonitor.TryEnter(FilesToRead, Main.TimeoutLimit.Value))
 									{
 										try
 										{
@@ -166,7 +170,7 @@ namespace ShortMenuLoader
 										}
 										finally
 										{
-											dicLock.ReleaseMutex();
+											TMonitor.Exit(FilesToRead);
 										}
 									}
 									else
@@ -178,7 +182,7 @@ namespace ShortMenuLoader
 								}
 								else
 								{
-									if (dicLock.WaitOne(Main.TimeoutLimit.Value))
+									if (TMonitor.TryEnter(FilesToRead, Main.TimeoutLimit.Value))
 									{
 										try
 										{
@@ -186,7 +190,7 @@ namespace ShortMenuLoader
 										}
 										finally
 										{
-											dicLock.ReleaseMutex();
+											TMonitor.Exit(FilesToRead);
 										}
 									}
 									else
@@ -201,7 +205,7 @@ namespace ShortMenuLoader
 							{
 								token.ThrowIfCancellationRequested();
 
-								if (dicLock.WaitOne(Main.TimeoutLimit.Value))
+								if (TMonitor.TryEnter(FilesToRead, Main.TimeoutLimit.Value))
 								{
 									try
 									{
@@ -209,7 +213,7 @@ namespace ShortMenuLoader
 									}
 									finally
 									{
-										dicLock.ReleaseMutex();
+										TMonitor.Exit(FilesToRead);
 									}
 								}
 								else
@@ -218,10 +222,12 @@ namespace ShortMenuLoader
 									cts.Cancel();
 									token.ThrowIfCancellationRequested();
 								}
-							} 
+							}
 						}
 						Main.logger.LogDebug($"Menu memory loader is finished!");
 					}), token);
+
+					//var watch2 = Stopwatch.StartNew();
 
 					while (servant.IsCanceled == false && (servant.IsCompleted == false || FilesToRead.Count > 0))
 					{
@@ -237,15 +243,15 @@ namespace ShortMenuLoader
 						{
 							strFileName = FilesToRead.FirstOrDefault().Key;
 						}
-						else if (dicLock.WaitOne(Main.TimeoutLimit.Value))
+						else if (TMonitor.TryEnter(FilesToRead, Main.TimeoutLimit.Value))
 						{
 							try
 							{
 								strFileName = FilesToRead.FirstOrDefault().Key;
 							}
-							finally 
+							finally
 							{
-								dicLock.ReleaseMutex();
+								TMonitor.Exit(FilesToRead);
 							}
 						}
 						else
@@ -254,9 +260,11 @@ namespace ShortMenuLoader
 
 							MutexTimeoutCounter += 1;
 
-							if (MutexTimeoutCounter > 5) {
+							if (MutexTimeoutCounter > 5)
+							{
 								continue;
-							} else 
+							}
+							else
 							{
 								MutexTimeoutCounter = 0;
 								cts.Cancel();
@@ -265,14 +273,15 @@ namespace ShortMenuLoader
 						}
 
 						SceneEdit.SMenuItem mi2 = new SceneEdit.SMenuItem();
-					//SceneEdit.GetMenuItemSetUP causes crash if parallel threaded. Our implementation is thread safe-ish.
-					if (GSModMenuLoad.GetMenuItemSetUP(mi2, strFileName, out string iconLoad))
+						//SceneEdit.GetMenuItemSetUP causes crash if parallel threaded. Our implementation is thread safe-ish.
+						if (GSModMenuLoad.GetMenuItemSetUP(mi2, strFileName, out string iconLoad))
 						{
 							if (iconLoad != null)
 							{
 								listOfLoads.Add(mi2);
-								QuickEdit.idItemDic[mi2.m_nMenuFileRID] = mi2;
-								QuickEdit.texFileIDDic[mi2.m_nMenuFileRID] = iconLoad;
+
+								QuickEdit.f_RidsToStubs[mi2.m_nMenuFileRID] = iconLoad;
+
 								mi2.m_texIcon = Texture2D.whiteTexture;
 							}
 						}
@@ -281,7 +290,7 @@ namespace ShortMenuLoader
 						{
 							FilesToRead.Remove(strFileName);
 						}
-						else if (dicLock.WaitOne(Main.TimeoutLimit.Value))
+						else if (TMonitor.TryEnter(FilesToRead, Main.TimeoutLimit.Value))
 						{
 							try
 							{
@@ -289,13 +298,13 @@ namespace ShortMenuLoader
 							}
 							finally
 							{
-								dicLock.ReleaseMutex();
+								TMonitor.Exit(FilesToRead);
 							}
 						}
 						else
 						{
 							Main.logger.LogWarning($"Timed out waiting for mutex to allow entry...");
-							
+
 							MutexTimeoutCounter += 1;
 
 							if (MutexTimeoutCounter > 5)
@@ -311,20 +320,24 @@ namespace ShortMenuLoader
 						}
 					}
 
+					//watch2.Stop();
+
 					if (servant.IsFaulted)
 					{
 						Main.logger.LogError($"Servant task failed due to an unexpected error!");
 
 						throw servant.Exception;
 					}
-					else if(token.IsCancellationRequested)
+					else if (token.IsCancellationRequested)
 					{
 						Main.logger.LogError($"A cancellation request was sent out! This can be due to mutex failures...");
 
 						token.ThrowIfCancellationRequested();
 					}
 
-					Main.logger.LogDebug($"Loader is finished!");
+					Main.logger.LogDebug($"Mod Loader is finished!\n");
+					//$"\nFinished reading directory @ {watch1.Elapsed}\n" +
+					//$"Finished while loop @ {watch2.Elapsed}");
 				}));
 
 			//We wait until the manager is not busy because starting work while the manager is busy causes egregious bugs.
@@ -345,6 +358,8 @@ namespace ShortMenuLoader
 			}
 
 			Main.logger.LogDebug("Worker finished! Now continuing foreach...");
+
+			//var watch3 = Stopwatch.StartNew();
 
 			foreach (SceneEdit.SMenuItem mi2 in listOfLoads)
 			{
@@ -396,8 +411,11 @@ namespace ShortMenuLoader
 				}
 			}
 
+			//watch3.Stop();
+
 			Main.ThreadsDone++;
-			Main.logger.LogInfo($"Standard mods finished loading at: {Main.WatchOverall.Elapsed}");
+			Main.logger.LogInfo($"Standard mods finished loading at: {Main.WatchOverall.Elapsed}\n");
+			//$"Finished foreach loop at {watch3.Elapsed}");
 
 			Main.@this.StartCoroutine(SaveCache());
 
@@ -790,7 +808,7 @@ namespace ShortMenuLoader
 					}
 				}
 
-				if (Main.PutMenuFileNameInItemDescription.Value && !mi.m_strInfo.Contains($"\n\n{f_strMenuFileName}")) 
+				if (Main.PutMenuFileNameInItemDescription.Value && !mi.m_strInfo.Contains($"\n\n{f_strMenuFileName}"))
 				{
 					mi.m_strInfo = mi.m_strInfo + $"\n\n{f_strMenuFileName}";
 				}

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using TMonitor = System.Threading.Monitor;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -25,7 +26,7 @@ namespace ShortMenuLoader
 			Task loaderWorker = Task.Factory.StartNew(new Action(() =>
 			{
 
-				Mutex dicLock = new Mutex();
+				//Mutex dicLock = new Mutex();
 
 				Task servantWorker = Task.Factory.StartNew(new Action(() =>
 				{
@@ -33,14 +34,14 @@ namespace ShortMenuLoader
 					{
 						try
 						{
-							if (dicLock.WaitOne(Main.TimeoutLimit.Value))
+							if (TMonitor.TryEnter(modFiles, Main.TimeoutLimit.Value))
 							{
 								try
 								{
 									modFiles[mod] = new MemoryStream(File.ReadAllBytes(mod));
 								} finally 
 								{
-									dicLock.ReleaseMutex();
+									TMonitor.Exit(modFiles);
 								}
 							}
 							else
@@ -63,7 +64,28 @@ namespace ShortMenuLoader
 						continue;
 					}
 
-					string strFileName = modFiles.First().Key;
+					string strFileName;
+
+					if (servantWorker.IsCompleted)
+					{
+						strFileName = modFiles.First().Key;
+					}
+					else if (TMonitor.TryEnter(modFiles, Main.TimeoutLimit.Value))
+					{
+						try
+						{
+							strFileName = modFiles.First().Key;
+						}
+						finally
+						{
+							TMonitor.Exit(modFiles);
+						}
+					}
+					else
+					{
+						Main.logger.LogWarning($"Timed out waiting for mutex to allow entry...");
+						continue;
+					}
 
 					SceneEdit.SMenuItem mi2 = new SceneEdit.SMenuItem();
 					if (ModMenuLoad.InitModMenuItemScript(mi2, strFileName, out byte[] icon))
@@ -75,7 +97,7 @@ namespace ShortMenuLoader
 					{
 						modFiles.Remove(strFileName);
 					}
-					else if (dicLock.WaitOne(Main.TimeoutLimit.Value))
+					else if (TMonitor.TryEnter(modFiles, Main.TimeoutLimit.Value))
 					{
 						try
 						{
@@ -83,7 +105,7 @@ namespace ShortMenuLoader
 						}
 						finally
 						{
-							dicLock.ReleaseMutex();
+							TMonitor.Exit(modFiles);
 						}
 					} else 
 					{

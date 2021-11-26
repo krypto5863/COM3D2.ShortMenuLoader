@@ -126,7 +126,9 @@ namespace ShortMenuLoader
 				}
 				else
 				{
+#if DEBUG
 					Main.logger.LogWarning($"{textureFileName} wasn't loaded so it had to be loaded in manually...");
+#endif
 
 					if (ModDirScanned)
 					{
@@ -134,14 +136,18 @@ namespace ShortMenuLoader
 
 						if (fetchedResource != null)
 						{
+#if DEBUG
 							Main.logger.LogWarning($"{textureFileName} Loaded from mod folder...");
+#endif
 							f_LoadedTextures[textureFileName] = fetchedResource.CreateTexture2D();
 						}
 					}
 
 					if (!f_LoadedTextures.ContainsKey(textureFileName) || f_LoadedTextures[textureFileName] == null)
 					{
+#if DEBUG
 						Main.logger.LogWarning($"{textureFileName} Isn't in the mod folder, loading from game system...");
+#endif
 
 						f_LoadedTextures[textureFileName] = ImportCM.CreateTexture(textureFileName);
 					}
@@ -173,7 +179,9 @@ namespace ShortMenuLoader
 					}
 
 					ModDirScanned = true;
+#if DEBUG
 					Main.logger.LogInfo($"Done Scanning Mod Dir @ {watch1.Elapsed}");
+#endif
 				}
 
 				int filesLoadedCount = 0;

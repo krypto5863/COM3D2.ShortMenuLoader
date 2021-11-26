@@ -142,7 +142,9 @@ namespace ShortMenuLoader
 				}
 				else
 				{
+#if DEBUG
 					Main.logger.LogWarning($"{textureFileName} wasn't loaded so it had to be loaded in manually...");
+#endif
 
 					if (!f_LoadedTextures.ContainsKey(textureFileName) || f_LoadedTextures[textureFileName] == null)
 					{

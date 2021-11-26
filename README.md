@@ -1,5 +1,5 @@
 # COM3D2.ShortMenuLoader
-A plugin dedicated to fixing Kiss's horrendous code and making edit mode loading as fast as it can be.
+A plugin dedicated to fixing Kiss's horrendous code and making edit mode loading as fast as it can be. Recommended you also get SMVD https://github.com/krypto5863/COM3D2.ShortMenuVanillaDatabase
 
 As the name suggests, this plugin will make your load into Edit mode a lot quicker. You will see large buffs to your loading speed if you have large mod folders. Players with little to no mods (inside of their Mod folder), OR players who already utilized CacheEditMenu and QuickEditStart may not notice any large differences.
 
@@ -34,10 +34,10 @@ The first time you enter edit mode will be when a cache is actually built so it 
 
 Cache is saved to `BepinEx/config`, it can be deleted if you find it has become corrupt or is presenting an issue, which would be odd and rare.
 
-Vanilla menus cache is available but optional as it cannot detect when a menu file has changed, it can only detect a difference in `paths.dat` file timestamps. It is disabled by default in the F1 menu (ConfigurationManager) and in the config file.
+Vanilla menus cache is available but optional as it cannot detect when a menu file has changed, it can only detect a difference in `paths.dat` file timestamps. It is disabled by default in the F1 menu (ConfigurationManager) and in the config file. If you have SMVD, the vanilla cache is disabled completely. SMVD already caches vanilla files, so calling for SMVD to give us a file is better.
 
 An optional feature was recently added that gave mods +10,000 to priority. This forces all mod icons to appear way after vanilla items, giving you a slightly more organized view.
 
 Duplicates are reported in your console at load time. These are considered bad practice and can slow down load times and cause confusion and bugs. These should be corrected when possible.
 
-Your times may not always be 100% consistent. For one, this will not make vanilla loading THAT much faster. Even with vanilla cache, we still have to wait for an unmodified database to be loaded to even begin loading the vanilla menus. This currently accounts for 70-90% of the delay in most if not all cases. Nothing can be done without some drastic measures. Said database begins loading as soon as you enter the main menu. As a result, your times can appear to fluctuate wildly, but that's because the database may have loaded earlier or later than you expected. To check this, you can refer to the times posted in your console after load and look for the amount of time spent waiting for the unmodified database to finish.
+Your times may not always be 100% consistent. For one, this will not make vanilla loading THAT much faster. Even with vanilla cache, we still have to wait for an unmodified database to be loaded to even begin loading the vanilla menus. This currently accounts for 70-90% of the delay in most if not all cases. The solution to this problem is SMVD AKA ShortMenuVanillaDatabase which is highly recommended to solve this problem. Without SMVD, said database begins loading as soon as you enter the main menu. As a result, your times can appear to fluctuate wildly, but that's because the database may have loaded earlier or later than you expected. To check this, you can refer to the times posted in your console after load and look for the amount of time spent waiting for the unmodified database to finish.

@@ -2,7 +2,7 @@
 
 namespace ShortMenuLoader
 {
-	internal struct MenuStub
+	internal class MenuStub
 	{
 		public string Name { get; set; }
 		public string SourceArc { get; set; }

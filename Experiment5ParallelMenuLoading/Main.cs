@@ -38,6 +38,7 @@ namespace ShortMenuLoader
 		public static ConfigEntry<bool> UseVanillaCache;
 		public static ConfigEntry<bool> ChangeModPriority;
 		public static ConfigEntry<bool> PutMenuFileNameInItemDescription;
+		public static ConfigEntry<bool> UseIconPreloader;
 
 		internal static bool SMVDLoaded = false;
 
@@ -102,6 +103,8 @@ namespace ShortMenuLoader
 			ChangeModPriority = Config.Bind("General", "Add 10,000 to Mod Item Priority", false, "This option simply adds 10,000 priority to all mod items loaded. Handy if you don't want mod items mix and matching with vanilla stuff or appearing before the remove button.");
 
 			PutMenuFileNameInItemDescription = Config.Bind("General", "Append Menu file Names to Descriptions", false, "This option appends menu file names to the descriptions of the items. Useful for modders or for users looking to take out certain mods. Will not work if activated when already in edit mode.");
+
+			UseIconPreloader = Config.Bind("General", "Whether to use the IconPreloader for mod files.", true, "In some users with weaker computers, this can cause massive slowdowns or ram over-usage. For these users, it might be more desirable to leave this off.");
 
 			@this2.StartCoroutine(VanillaMenuLoad.LoadCache());
 		}
@@ -241,7 +244,11 @@ namespace ShortMenuLoader
 			ThreadsDone = 0;
 			//Calling it directly after threads are refixed. It'll load the directory in the background while other things load.
 			//Temporarily disabled. It's a wittle buggy.
-			QuickEdit.EngageModPreloader();
+
+			if (UseIconPreloader.Value) 
+			{
+				QuickEdit.EngageModPreloader();
+			}
 
 			Main.@this.InitCategoryList();
 

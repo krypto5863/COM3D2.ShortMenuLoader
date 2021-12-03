@@ -16,6 +16,10 @@ namespace ShortMenuLoader
 {
 	internal static class QuickEdit
 	{
+		private static RenderTexture TempRender;
+		private static readonly byte[] ModIconOverlay = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGFSURBVHhe7dixLgRRFMbxM4u1sxoKpQegUHoClVeQSDSEQiLZQqXwChoiKJQ8gZonoPAAEgUhoRhWdse5c + 7KZPcOYjQy/18ye+49O9WXO3NvRgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIB/IpLJNPXjv3EfRX5UCTVf8UsEWBIBljQYYNoV6dz6SYHO3ff3VMRggC9LIo9Tek37Rp/us8jTrN3zduqb1RV4hN+tdG50eGHjvNcjXaUPfoIv3oEjGtaxH+e4AJvbfoLiAJtbFmCa+IZqn+vKvBKJ130DgQDdObgpMrajVc/YyX7WzSQHIqPLfgInvAJrE1brC7oKD23sdt32mWbbsjky4QCjcavxpgZ3rZvJpQa5JzI8p9eM/YdMQYC9FTgvMqSBucc42dVAN6yPTwUB5r4HNFb0vHdiB+zGom+ip2ATyYnX9Ec3lXjV5hk94iAz+DkrbVuN6lYd18vPnVDPqfznLBdKfzChoEK9Cgq/A/FjBFgSAZYi8gHGBEuPVABsTQAAAABJRU5ErkJggg==");
+		private static Texture2D ModIconOverlayLoaded;
+
 		//A cache of files 
 		private static Dictionary<string, string> f_TexInModFolder = null;
 
@@ -152,6 +156,12 @@ namespace ShortMenuLoader
 						f_LoadedTextures[textureFileName] = ImportCM.CreateTexture(textureFileName);
 					}
 				}
+
+				/*
+				if (f_LoadedTextures.TryGetValue(textureFileName, out var texture2D)) 
+				{
+					OverlayIcon(ref texture2D);
+				}*/
 			}
 
 			f_ProcessedTextures.TryRemove(textureFileName, out _);
@@ -162,7 +172,7 @@ namespace ShortMenuLoader
 		{
 			var watch1 = Stopwatch.StartNew();
 
-			int MaxThreadsToSpawn = 4;
+			int MaxThreadsToSpawn = Math.Min(4, (int)(Environment.ProcessorCount * 0.25));
 
 			Task loaderWorker = Task.Factory.StartNew(new Action(() =>
 			{
@@ -194,8 +204,6 @@ namespace ShortMenuLoader
 				var watch2 = Stopwatch.StartNew();
 
 				var modQueue = new ConcurrentQueue<string>(f_RidsToStubs.Values.Where(val =>  !f_ProcessedTextures.ContainsKey(val) && !f_LoadedTextures.ContainsKey(val)));
-
-				//Main.LockDownForThreading = true;
 
 				Parallel.For(0, modQueue.Count, new ParallelOptions { MaxDegreeOfParallelism = MaxThreadsToSpawn }, (count, state) =>
 				{
@@ -320,6 +328,30 @@ namespace ShortMenuLoader
 			{
 				return null;
 			}
+		}
+
+		public static void OverlayIcon(ref Texture2D texture2D) 
+		{
+			Material systemMaterial = GameUty.GetSystemMaterial(GameUty.SystemMaterial.Alpha);
+
+			if (TempRender == null)
+			{
+				TempRender = new RenderTexture(texture2D.width, texture2D.height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Default);
+			}
+			else
+			{
+				TempRender.DiscardContents();
+			}
+
+			if (ModIconOverlayLoaded == null) 
+			{
+				ModIconOverlayLoaded = new Texture2D(80,80);
+				ModIconOverlayLoaded.LoadImage(ModIconOverlay);
+			}
+
+			Graphics.Blit(texture2D, TempRender, systemMaterial);
+			Graphics.Blit(ModIconOverlayLoaded, TempRender, systemMaterial);
+			Graphics.CopyTexture(TempRender, texture2D);
 		}
 	}
 }

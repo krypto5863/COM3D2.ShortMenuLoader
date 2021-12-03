@@ -149,7 +149,7 @@ namespace ShortMenuLoader
 
 					while (CacheLoadDone != true)
 					{
-						Thread.Sleep(1);
+						Thread.Sleep(100);
 					}
 
 					//Mutex dicLock = new Mutex();

@@ -24,6 +24,8 @@ Changes this big bring some downsides. Luckily, this one has few.
 - Compatibility: Changes this large have some compatibility issues with other plugins of a similar nature or that hook into modified functions. Luckily not many plugins do.
 
 ## Usage
+SML does not support versions 3.0/CR-Edit of COM! We support the 2.0 branch and the latest R18 English releases. INM may work fine but it may not.
+
 This plugin is as simple as drop in and play. From the releases section, drop the two DLLs into `BepinEx/plugins`.
 
 The following plugins can and should be removed as they are no longer utilized if SML is installed:

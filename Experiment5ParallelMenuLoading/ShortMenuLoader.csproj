@@ -38,6 +38,7 @@
     <Compile Include="Loaders\ModMenuLoad.cs" />
     <None Include="packages.config" />
     <None Include="ParallelWhile.cs" />
+    <Compile Include="PreloadTexture.cs" />
     <Compile Include="QuickEdit.cs" />
     <Compile Include="Loaders\VanillaMenuLoad.cs" />
     <Compile Include="QuickEditVanilla.cs" />

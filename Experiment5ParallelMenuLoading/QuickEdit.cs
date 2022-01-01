@@ -10,22 +10,21 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using TMonitor = System.Threading.Monitor;
 using UnityEngine;
 
 namespace ShortMenuLoader
 {
 	internal static class QuickEdit
 	{
-		private static RenderTexture TempRender;
-		private static readonly byte[] ModIconOverlay = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGFSURBVHhe7dixLgRRFMbxM4u1sxoKpQegUHoClVeQSDSEQiLZQqXwChoiKJQ8gZonoPAAEgUhoRhWdse5c + 7KZPcOYjQy/18ye+49O9WXO3NvRgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIB/IpLJNPXjv3EfRX5UCTVf8UsEWBIBljQYYNoV6dz6SYHO3ff3VMRggC9LIo9Tek37Rp/us8jTrN3zduqb1RV4hN+tdG50eGHjvNcjXaUPfoIv3oEjGtaxH+e4AJvbfoLiAJtbFmCa+IZqn+vKvBKJ130DgQDdObgpMrajVc/YyX7WzSQHIqPLfgInvAJrE1brC7oKD23sdt32mWbbsjky4QCjcavxpgZ3rZvJpQa5JzI8p9eM/YdMQYC9FTgvMqSBucc42dVAN6yPTwUB5r4HNFb0vHdiB+zGom+ip2ATyYnX9Ec3lXjV5hk94iAz+DkrbVuN6lYd18vPnVDPqfznLBdKfzChoEK9Cgq/A/FjBFgSAZYi8gHGBEuPVABsTQAAAABJRU5ErkJggg==");
-		private static Texture2D ModIconOverlayLoaded;
+		private static long AmountOfDataPreloaded;
 
 		//A cache of files 
 		private static Dictionary<string, string> f_TexInModFolder = null;
 
 		//Will be accessed in a concurrent modality frequently. Locking is slow.
 		internal static Dictionary<int, string> f_RidsToStubs = new Dictionary<int, string>();
-		private static readonly ConcurrentDictionary<string, TextureResource> f_ProcessedTextures = new ConcurrentDictionary<string, TextureResource>();
+		private static readonly ConcurrentDictionary<string, PreloadTexture> f_ProcessedTextures = new ConcurrentDictionary<string, PreloadTexture>();
 
 		//Should only be used in a non-concurrent modality.
 		private static Dictionary<string, Texture2D> f_LoadedTextures = new Dictionary<string, Texture2D>();
@@ -121,6 +120,22 @@ namespace ShortMenuLoader
 				return null;
 			}
 
+			if (Main.UseIconPreloader.Value == false)
+			{
+
+				if (ModDirScanned)
+				{
+					var fetchedResource = LoadTextureFromModFolder(textureFileName);
+
+					if (fetchedResource != null) 
+					{
+						return fetchedResource.CreateTexture2D();
+					}
+				}
+
+				return ImportCM.CreateTexture(textureFileName);
+			}
+
 			//If texture isn't loaded, load it.
 			if (!f_LoadedTextures.ContainsKey(textureFileName) || f_LoadedTextures[textureFileName] == null)
 			{
@@ -156,12 +171,6 @@ namespace ShortMenuLoader
 						f_LoadedTextures[textureFileName] = ImportCM.CreateTexture(textureFileName);
 					}
 				}
-
-				/*
-				if (f_LoadedTextures.TryGetValue(textureFileName, out var texture2D)) 
-				{
-					OverlayIcon(ref texture2D);
-				}*/
 			}
 
 			f_ProcessedTextures.TryRemove(textureFileName, out _);
@@ -198,17 +207,22 @@ namespace ShortMenuLoader
 
 				while (Main.ThreadsDone < 3)
 				{
-					Thread.Sleep(3000);
+					Thread.Sleep(1000);
+					//yield return null;
 				}
 
 				var watch2 = Stopwatch.StartNew();
 
 				var modQueue = new ConcurrentQueue<string>(f_RidsToStubs.Values.Where(val =>  !f_ProcessedTextures.ContainsKey(val) && !f_LoadedTextures.ContainsKey(val)));
 
+				Main.logger.LogInfo($"Starting preloader... GC at {GC.GetTotalMemory(false) / 1000000}");
+
 				Parallel.For(0, modQueue.Count, new ParallelOptions { MaxDegreeOfParallelism = MaxThreadsToSpawn }, (count, state) =>
+				//while(modQueue.Count > 0)
 				{
 					if (modQueue.Count > 0 && modQueue.TryDequeue(out var key))
 					{
+
 						var loadedTex = LoadTextureFromModFolder(key);
 
 						if (loadedTex != null)
@@ -232,6 +246,7 @@ namespace ShortMenuLoader
 						if (Main.ThreadsDone >= 3 && modQueue.Count <= 0)
 						{
 							state.Break();
+							//break;
 						}
 
 						return;
@@ -239,13 +254,13 @@ namespace ShortMenuLoader
 				});
 
 				//Main.LockDownForThreading = false;
-
 				watch2.Stop();
 				watch1.Stop();
 
 				Main.logger.LogInfo($"Mod Icon Preloader Done @ {watch1.Elapsed}\n" +
 				$"\nWorked for {watch2.Elapsed}\n" +
-				$"In total loaded {filesLoadedCount} mod files...\n");
+				$"In total loaded {filesLoadedCount} mod files." +
+				$"{GC.GetTotalMemory(false) * 0.000001} currently in GC. We preloaded {AmountOfDataPreloaded * 0.000001} Mbs");
 			}));
 
 			while (!loaderWorker.IsCompleted && !loaderWorker.IsFaulted)
@@ -262,7 +277,7 @@ namespace ShortMenuLoader
 			//QuickEditVanilla.EngageVanillaPreloader();
 		}
 
-		public static TextureResource LoadTextureFromModFolder(string f_strFileName)
+		public static PreloadTexture LoadTextureFromModFolder(string f_strFileName)
 		{
 			if (!f_TexInModFolder.TryGetValue(f_strFileName.ToLower(), out var fullPathToFile))
 			{
@@ -272,57 +287,88 @@ namespace ShortMenuLoader
 
 			try
 			{
-				BinaryReader binaryReader = new BinaryReader(new FileStream(fullPathToFile, FileMode.Open), Encoding.UTF8);
-
-				string text = binaryReader.ReadString();
-				if (text != "CM3D2_TEX")
+				using (var fileStream = File.OpenRead(fullPathToFile))
+				using (var binaryReader = new BinaryReader(fileStream))
 				{
-					return null;
-				}
-				int num = binaryReader.ReadInt32();
-				string text2 = binaryReader.ReadString();
-				int width = 0;
-				int height = 0;
-				TextureFormat textureFormat = (TextureFormat)5;
-				Rect[] array = null;
-				if (1010 <= num)
-				{
-					if (1011 <= num)
+					string text = binaryReader.ReadString();
+					if (text != "CM3D2_TEX")
 					{
-						int num2 = binaryReader.ReadInt32();
-						if (0 < num2)
+						return null;
+					}
+					int num = binaryReader.ReadInt32();
+					string text2 = binaryReader.ReadString();
+
+					int width = 0;
+					int height = 0;
+					TextureFormat textureFormat = TextureFormat.ARGB32;
+
+					Rect[] array = null;
+
+					if (1010 <= num)
+					{
+						if (1011 <= num)
 						{
-							array = new Rect[num2];
-							for (int i = 0; i < num2; i++)
+							int num2 = binaryReader.ReadInt32();
+							if (0 < num2)
 							{
-								float num3 = binaryReader.ReadSingle();
-								float num4 = binaryReader.ReadSingle();
-								float num5 = binaryReader.ReadSingle();
-								float num6 = binaryReader.ReadSingle();
-								array[i] = new Rect(num3, num4, num5, num6);
+								array = new Rect[num2];
+								for (int i = 0; i < num2; i++)
+								{
+									float num3 = binaryReader.ReadSingle();
+									float num4 = binaryReader.ReadSingle();
+									float num5 = binaryReader.ReadSingle();
+									float num6 = binaryReader.ReadSingle();
+									array[i] = new Rect(num3, num4, num5, num6);
+								}
 							}
 						}
+						width = binaryReader.ReadInt32();
+						height = binaryReader.ReadInt32();
+						textureFormat = (TextureFormat)binaryReader.ReadInt32();
 					}
-					width = binaryReader.ReadInt32();
-					height = binaryReader.ReadInt32();
-					textureFormat = (TextureFormat)binaryReader.ReadInt32();
+
+					int num7 = binaryReader.ReadInt32();
+
+					if (num7 > binaryReader.BaseStream.Length) 
+					{
+						Array.Resize(ref array, 0);
+						Main.logger.LogWarning($"{f_strFileName} may be corrupted. The loader will use a white texture instead. Please correct the issue or expect large RAM usage spikes.");
+						return PreloadTexture.WhiteTexture;
+					}
+
+					byte[] array2 = new byte[num7];
+
+					if (TMonitor.TryEnter(AmountOfDataPreloaded, Main.TimeoutLimit.Value))
+					{
+						try
+						{
+							AmountOfDataPreloaded += num7;
+						}
+						finally
+						{
+							TMonitor.Exit(AmountOfDataPreloaded);
+						}
+					}
+
+					var ActuallyRead = binaryReader.Read(array2, 0, num7);
+
+					if (num == 1000)
+					{
+						width = ((int)array2[16] << 24 | (int)array2[17] << 16 | (int)array2[18] << 8 | (int)array2[19]);
+						height = ((int)array2[20] << 24 | (int)array2[21] << 16 | (int)array2[22] << 8 | (int)array2[23]);
+					}
+
+					if (num7 > ActuallyRead)
+					{
+						Array.Resize(ref array, 0);
+						Array.Resize(ref array2, 0);
+
+						Main.logger.LogWarning($"{f_strFileName} made a larger array than it needed {num7 * 0.000001}MBs. It may be corrupted. Please correct the issue or you may see RAM usage spikes..");
+						return PreloadTexture.WhiteTexture;
+					}
+
+					return new PreloadTexture(width, height, textureFormat, ref array, ref array2, f_strFileName);
 				}
-
-				int num7 = binaryReader.ReadInt32();
-				byte[] array2;
-
-				array2 = new byte[num7];
-				binaryReader.Read(array2, 0, num7);
-
-				if (num == 1000)
-				{
-					width = ((int)array2[16] << 24 | (int)array2[17] << 16 | (int)array2[18] << 8 | (int)array2[19]);
-					height = ((int)array2[20] << 24 | (int)array2[21] << 16 | (int)array2[22] << 8 | (int)array2[23]);
-				}
-
-				binaryReader.Close();
-
-				return new TextureResource(width, height, textureFormat, array, array2);
 			}
 			catch
 			{
@@ -330,6 +376,7 @@ namespace ShortMenuLoader
 			}
 		}
 
+		/*
 		public static void OverlayIcon(ref Texture2D texture2D) 
 		{
 			Material systemMaterial = GameUty.GetSystemMaterial(GameUty.SystemMaterial.Alpha);
@@ -353,5 +400,6 @@ namespace ShortMenuLoader
 			Graphics.Blit(ModIconOverlayLoaded, TempRender, systemMaterial);
 			Graphics.CopyTexture(TempRender, texture2D);
 		}
+		*/
 	}
 }

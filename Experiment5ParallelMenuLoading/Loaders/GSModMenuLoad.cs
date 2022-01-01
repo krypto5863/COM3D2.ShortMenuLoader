@@ -186,7 +186,7 @@ namespace ShortMenuLoader
 									{
 										try
 										{
-											FilesToRead[s.ToLower()] = new MemoryStream(File.ReadAllBytes(FilesDictionary[s]));
+											FilesToRead[s.ToLower()] = new MemoryStream(File.ReadAllBytes(FilesDictionary[s]), false);
 										}
 										finally
 										{
@@ -286,6 +286,11 @@ namespace ShortMenuLoader
 							}
 						}
 
+						if (FilesToRead[strFileName] != null)
+						{
+							FilesToRead[strFileName].Close();
+						}
+
 						if (servant.IsCompleted)
 						{
 							FilesToRead.Remove(strFileName);
@@ -377,10 +382,12 @@ namespace ShortMenuLoader
 
 					if (!mi2.m_bMan)
 					{
-						AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(Main.@this, new object[] { mi2 });
+						//AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(Main.@this, new object[] { mi2 });
+						Main.@this.AddMenuItemToList(mi2);
 						menuList.Add(mi2);
 						Main.@this.m_menuRidDic[mi2.m_nMenuFileRID] = mi2;
-						string parentMenuName2 = AccessTools.Method(typeof(SceneEdit), "GetParentMenuFileName").Invoke(Main.@this, new object[] { mi2 }) as string;
+						//string parentMenuName2 = AccessTools.Method(typeof(SceneEdit), "GetParentMenuFileName").Invoke(Main.@this, new object[] { mi2 }) as string;
+						string parentMenuName2 = SceneEdit.GetParentMenuFileName(mi2);
 						if (!string.IsNullOrEmpty(parentMenuName2))
 						{
 							int hashCode2 = parentMenuName2.GetHashCode();
@@ -562,7 +569,7 @@ namespace ShortMenuLoader
 			{
 				if (FilesToRead[f_strMenuFileName] == null)
 				{
-					FilesToRead[f_strMenuFileName] = new MemoryStream(File.ReadAllBytes(FilesDictionary[f_strMenuFileName]));
+					FilesToRead[f_strMenuFileName] = new MemoryStream(File.ReadAllBytes(FilesDictionary[f_strMenuFileName]), false);
 				}
 			}
 			catch (Exception ex)
@@ -589,246 +596,246 @@ namespace ShortMenuLoader
 			try
 			{
 				cacheEntry.DateModified = File.GetLastWriteTimeUtc(FilesDictionary[f_strMenuFileName]);
-
-				BinaryReader binaryReader = new BinaryReader(FilesToRead[f_strMenuFileName], Encoding.UTF8);
-				string text = binaryReader.ReadString();
-
-				if (text != "CM3D2_MENU")
+				using (BinaryReader binaryReader = new BinaryReader(FilesToRead[f_strMenuFileName], Encoding.UTF8))
 				{
-					Main.logger.LogError("ProcScriptBin (例外 : ヘッダーファイルが不正です。) The header indicates a file type that is not a menu file!" + text + " @ " + f_strMenuFileName);
+					string text = binaryReader.ReadString();
 
-					return false;
-				}
-
-				binaryReader.ReadInt32();
-				path = binaryReader.ReadString();
-				binaryReader.ReadString();
-				binaryReader.ReadString();
-				binaryReader.ReadString();
-				binaryReader.ReadInt32();
-				string text5 = null;
-
-				while (true)
-				{
-					int num4 = binaryReader.ReadByte();
-					text7 = text6;
-					text6 = string.Empty;
-					if (num4 == 0)
+					if (text != "CM3D2_MENU")
 					{
-						break;
-					}
-					for (int i = 0; i < num4; i++)
-					{
-						text6 = text6 + "\"" + binaryReader.ReadString() + "\" ";
-					}
-					if (!(text6 == string.Empty))
-					{
-						string stringCom = UTY.GetStringCom(text6);
-						string[] stringList = UTY.GetStringList(text6);
-						if (stringCom == "name")
-						{
-							if (stringList.Length > 1)
-							{
-								string text8 = stringList[1];
-								string text9 = string.Empty;
-								string arg = string.Empty;
-								int j = 0;
-								while (j < text8.Length && text8[j] != '\u3000' && text8[j] != ' ')
-								{
-									text9 += text8[j];
-									j++;
-								}
-								while (j < text8.Length)
-								{
-									arg += text8[j];
-									j++;
-								}
-								mi.m_strMenuName = text9;
-								cacheEntry.Name = mi.m_strMenuName;
-							}
-							else
-							{
-								Main.logger.LogWarning("Menu file has no name and an empty description will be used instead." + " @ " + f_strMenuFileName);
-
-								mi.m_strMenuName = "";
-								cacheEntry.Name = mi.m_strMenuName;
-							}
-						}
-						else if (stringCom == "setumei")
-						{
-							if (stringList.Length > 1)
-							{
-								mi.m_strInfo = stringList[1];
-								mi.m_strInfo = mi.m_strInfo.Replace("《改行》", "\n");
-								cacheEntry.Description = mi.m_strInfo;
-							}
-							else
-							{
-								Main.logger.LogWarning("Menu file has no description (setumei) and an empty description will be used instead." + " @ " + f_strMenuFileName);
-
-								mi.m_strInfo = "";
-								cacheEntry.Description = mi.m_strInfo;
-							}
-						}
-						else if (stringCom == "category")
-						{
-							if (stringList.Length > 1)
-							{
-								string strCateName = stringList[1].ToLower();
-								mi.m_strCateName = strCateName;
-								cacheEntry.Category = mi.m_strCateName;
-								try
-								{
-									mi.m_mpn = (MPN)Enum.Parse(typeof(MPN), mi.m_strCateName);
-									cacheEntry.Category = mi.m_mpn.ToString();
-								}
-								catch
-								{
-									Main.logger.LogWarning("There is no category called (カテゴリがありません。): " + mi.m_strCateName + " @ " + f_strMenuFileName);
-									return false;
-								}
-							}
-							else
-							{
-								Main.logger.LogWarning("The following menu file has a category parent with no category: " + f_strMenuFileName);
-								return false;
-							}
-						}
-						else if (stringCom == "color_set")
-						{
-							if (stringList.Length > 1)
-							{
-								try
-								{
-									mi.m_eColorSetMPN = (MPN)Enum.Parse(typeof(MPN), stringList[1].ToLower());
-									cacheEntry.ColorSetMPN = mi.m_eColorSetMPN.ToString();
-								}
-								catch
-								{
-									Main.logger.LogWarning("There is no category called(カテゴリがありません。): " + mi.m_strCateName + " @ " + f_strMenuFileName);
-
-									return false;
-								}
-								if (stringList.Length >= 3)
-								{
-									mi.m_strMenuNameInColorSet = stringList[2].ToLower();
-									cacheEntry.ColorSetMenu = mi.m_strMenuNameInColorSet;
-								}
-							}
-							else
-							{
-								Main.logger.LogWarning("A color_set entry exists but is otherwise empty" + " @ " + f_strMenuFileName);
-							}
-						}
-						else if (stringCom == "tex" || stringCom == "テクスチャ変更")
-						{
-							MaidParts.PARTS_COLOR pcMultiColorID = MaidParts.PARTS_COLOR.NONE;
-							if (stringList.Length == 6)
-							{
-								string text10 = stringList[5];
-								try
-								{
-									pcMultiColorID = (MaidParts.PARTS_COLOR)Enum.Parse(typeof(MaidParts.PARTS_COLOR), text10.ToUpper());
-								}
-								catch
-								{
-									Main.logger.LogError("無限色IDがありません。(The following free color ID does not exist: )" + text10 + " @ " + f_strMenuFileName);
-
-									return false;
-								}
-								mi.m_pcMultiColorID = pcMultiColorID;
-								cacheEntry.MultiColorID = mi.m_pcMultiColorID.ToString();
-							}
-						}
-						else if (stringCom == "icon" || stringCom == "icons")
-						{
-							if (stringList.Length > 1)
-							{
-								text5 = stringList[1];
-							}
-							else
-							{
-								Main.logger.LogError("The following menu file has an icon entry but no field set: " + f_strMenuFileName);
-
-								return false;
-							}
-						}
-						else if (stringCom == "saveitem")
-						{
-							if (stringList.Length > 1)
-							{
-								string text11 = stringList[1];
-								if (String.IsNullOrEmpty(text11))
-								{
-									Main.logger.LogWarning("SaveItem is either null or empty." + " @ " + f_strMenuFileName);
-								}
-							}
-							else
-							{
-								Main.logger.LogWarning("A saveitem entry exists with nothing set in the field @ " + f_strMenuFileName);
-							}
-						}
-						else if (stringCom == "unsetitem")
-						{
-							mi.m_boDelOnly = true;
-							cacheEntry.DelMenu = mi.m_boDelOnly;
-						}
-						else if (stringCom == "priority")
-						{
-							if (stringList.Length > 1)
-							{
-								mi.m_fPriority = float.Parse(stringList[1]);
-								cacheEntry.Priority = mi.m_fPriority;
-							}
-							else
-							{
-								Main.logger.LogError("The following menu file has a priority entry but no field set. A default value of 10000 will be used: " + f_strMenuFileName);
-
-								mi.m_fPriority = 10000f;
-								cacheEntry.Priority = mi.m_fPriority;
-							}
-						}
-						else if (stringCom == "メニューフォルダ")
-						{
-							if (stringList.Length > 1)
-							{
-								if (stringList[1].ToLower() == "man")
-								{
-									mi.m_bMan = true;
-									cacheEntry.ManMenu = mi.m_bMan;
-								}
-							}
-							else
-							{
-								Main.logger.LogError("A a menu with a menu folder setting (メニューフォルダ) has an entry but no field set: " + f_strMenuFileName);
-
-								return false;
-							}
-						}
-					}
-				}
-
-				if (Main.PutMenuFileNameInItemDescription.Value && !mi.m_strInfo.Contains($"\n\n{f_strMenuFileName}"))
-				{
-					mi.m_strInfo = mi.m_strInfo + $"\n\n{f_strMenuFileName}";
-				}
-
-				if (!String.IsNullOrEmpty(text5))
-				{
-					try
-					{
-						IconTex = text5;
-						cacheEntry.Icon = text5;
-						//mi.m_texIcon = ImportCM.CreateTexture(text5);
-					}
-					catch (Exception)
-					{
-						Main.logger.LogError("Error setting some icon tex from a normal mod." + " @ " + f_strMenuFileName);
+						Main.logger.LogError("ProcScriptBin (例外 : ヘッダーファイルが不正です。) The header indicates a file type that is not a menu file!" + text + " @ " + f_strMenuFileName);
 
 						return false;
 					}
+
+					binaryReader.ReadInt32();
+					path = binaryReader.ReadString();
+					binaryReader.ReadString();
+					binaryReader.ReadString();
+					binaryReader.ReadString();
+					binaryReader.ReadInt32();
+					string text5 = null;
+
+					while (true)
+					{
+						int num4 = binaryReader.ReadByte();
+						text7 = text6;
+						text6 = string.Empty;
+						if (num4 == 0)
+						{
+							break;
+						}
+						for (int i = 0; i < num4; i++)
+						{
+							text6 = text6 + "\"" + binaryReader.ReadString() + "\" ";
+						}
+						if (!(text6 == string.Empty))
+						{
+							string stringCom = UTY.GetStringCom(text6);
+							string[] stringList = UTY.GetStringList(text6);
+							if (stringCom == "name")
+							{
+								if (stringList.Length > 1)
+								{
+									string text8 = stringList[1];
+									string text9 = string.Empty;
+									string arg = string.Empty;
+									int j = 0;
+									while (j < text8.Length && text8[j] != '\u3000' && text8[j] != ' ')
+									{
+										text9 += text8[j];
+										j++;
+									}
+									while (j < text8.Length)
+									{
+										arg += text8[j];
+										j++;
+									}
+									mi.m_strMenuName = text9;
+									cacheEntry.Name = mi.m_strMenuName;
+								}
+								else
+								{
+									Main.logger.LogWarning("Menu file has no name and an empty description will be used instead." + " @ " + f_strMenuFileName);
+
+									mi.m_strMenuName = "";
+									cacheEntry.Name = mi.m_strMenuName;
+								}
+							}
+							else if (stringCom == "setumei")
+							{
+								if (stringList.Length > 1)
+								{
+									mi.m_strInfo = stringList[1];
+									mi.m_strInfo = mi.m_strInfo.Replace("《改行》", "\n");
+									cacheEntry.Description = mi.m_strInfo;
+								}
+								else
+								{
+									Main.logger.LogWarning("Menu file has no description (setumei) and an empty description will be used instead." + " @ " + f_strMenuFileName);
+
+									mi.m_strInfo = "";
+									cacheEntry.Description = mi.m_strInfo;
+								}
+							}
+							else if (stringCom == "category")
+							{
+								if (stringList.Length > 1)
+								{
+									string strCateName = stringList[1].ToLower();
+									mi.m_strCateName = strCateName;
+									cacheEntry.Category = mi.m_strCateName;
+									try
+									{
+										mi.m_mpn = (MPN)Enum.Parse(typeof(MPN), mi.m_strCateName);
+										cacheEntry.Category = mi.m_mpn.ToString();
+									}
+									catch
+									{
+										Main.logger.LogWarning("There is no category called (カテゴリがありません。): " + mi.m_strCateName + " @ " + f_strMenuFileName);
+										return false;
+									}
+								}
+								else
+								{
+									Main.logger.LogWarning("The following menu file has a category parent with no category: " + f_strMenuFileName);
+									return false;
+								}
+							}
+							else if (stringCom == "color_set")
+							{
+								if (stringList.Length > 1)
+								{
+									try
+									{
+										mi.m_eColorSetMPN = (MPN)Enum.Parse(typeof(MPN), stringList[1].ToLower());
+										cacheEntry.ColorSetMPN = mi.m_eColorSetMPN.ToString();
+									}
+									catch
+									{
+										Main.logger.LogWarning("There is no category called(カテゴリがありません。): " + mi.m_strCateName + " @ " + f_strMenuFileName);
+
+										return false;
+									}
+									if (stringList.Length >= 3)
+									{
+										mi.m_strMenuNameInColorSet = stringList[2].ToLower();
+										cacheEntry.ColorSetMenu = mi.m_strMenuNameInColorSet;
+									}
+								}
+								else
+								{
+									Main.logger.LogWarning("A color_set entry exists but is otherwise empty" + " @ " + f_strMenuFileName);
+								}
+							}
+							else if (stringCom == "tex" || stringCom == "テクスチャ変更")
+							{
+								MaidParts.PARTS_COLOR pcMultiColorID = MaidParts.PARTS_COLOR.NONE;
+								if (stringList.Length == 6)
+								{
+									string text10 = stringList[5];
+									try
+									{
+										pcMultiColorID = (MaidParts.PARTS_COLOR)Enum.Parse(typeof(MaidParts.PARTS_COLOR), text10.ToUpper());
+									}
+									catch
+									{
+										Main.logger.LogError("無限色IDがありません。(The following free color ID does not exist: )" + text10 + " @ " + f_strMenuFileName);
+
+										return false;
+									}
+									mi.m_pcMultiColorID = pcMultiColorID;
+									cacheEntry.MultiColorID = mi.m_pcMultiColorID.ToString();
+								}
+							}
+							else if (stringCom == "icon" || stringCom == "icons")
+							{
+								if (stringList.Length > 1)
+								{
+									text5 = stringList[1];
+								}
+								else
+								{
+									Main.logger.LogError("The following menu file has an icon entry but no field set: " + f_strMenuFileName);
+
+									return false;
+								}
+							}
+							else if (stringCom == "saveitem")
+							{
+								if (stringList.Length > 1)
+								{
+									string text11 = stringList[1];
+									if (String.IsNullOrEmpty(text11))
+									{
+										Main.logger.LogWarning("SaveItem is either null or empty." + " @ " + f_strMenuFileName);
+									}
+								}
+								else
+								{
+									Main.logger.LogWarning("A saveitem entry exists with nothing set in the field @ " + f_strMenuFileName);
+								}
+							}
+							else if (stringCom == "unsetitem")
+							{
+								mi.m_boDelOnly = true;
+								cacheEntry.DelMenu = mi.m_boDelOnly;
+							}
+							else if (stringCom == "priority")
+							{
+								if (stringList.Length > 1)
+								{
+									mi.m_fPriority = float.Parse(stringList[1]);
+									cacheEntry.Priority = mi.m_fPriority;
+								}
+								else
+								{
+									Main.logger.LogError("The following menu file has a priority entry but no field set. A default value of 10000 will be used: " + f_strMenuFileName);
+
+									mi.m_fPriority = 10000f;
+									cacheEntry.Priority = mi.m_fPriority;
+								}
+							}
+							else if (stringCom == "メニューフォルダ")
+							{
+								if (stringList.Length > 1)
+								{
+									if (stringList[1].ToLower() == "man")
+									{
+										mi.m_bMan = true;
+										cacheEntry.ManMenu = mi.m_bMan;
+									}
+								}
+								else
+								{
+									Main.logger.LogError("A a menu with a menu folder setting (メニューフォルダ) has an entry but no field set: " + f_strMenuFileName);
+
+									return false;
+								}
+							}
+						}
+					}
+
+					if (Main.PutMenuFileNameInItemDescription.Value && !mi.m_strInfo.Contains($"\n\n{f_strMenuFileName}"))
+					{
+						mi.m_strInfo = mi.m_strInfo + $"\n\n{f_strMenuFileName}";
+					}
+
+					if (!String.IsNullOrEmpty(text5))
+					{
+						try
+						{
+							IconTex = text5;
+							cacheEntry.Icon = text5;
+							//mi.m_texIcon = ImportCM.CreateTexture(text5);
+						}
+						catch (Exception)
+						{
+							Main.logger.LogError("Error setting some icon tex from a normal mod." + " @ " + f_strMenuFileName);
+
+							return false;
+						}
+					}
 				}
-				binaryReader.Close();
 			}
 			catch (Exception ex2)
 			{
@@ -849,6 +856,7 @@ namespace ShortMenuLoader
 				return false;
 			}
 			MenuCache[f_strMenuFileName] = cacheEntry;
+
 			return true;
 		}
 	}

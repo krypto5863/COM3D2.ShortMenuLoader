@@ -131,7 +131,14 @@ namespace ShortMenuLoader
 		{
 			string textureFileName;
 
-			if (f_RidsToStubs.TryGetValue(menuFileID, out textureFileName)) ;
+			f_RidsToStubs.TryGetValue(menuFileID, out textureFileName);
+
+			if (Main.UseIconPreloader.Value == false)
+			{
+				var fetchedResource = ImportCM.CreateTexture(textureFileName);
+
+				return fetchedResource ?? null;
+			}
 
 			//If texture isn't loaded, load it.
 			if (!f_LoadedTextures.ContainsKey(textureFileName) || f_LoadedTextures[textureFileName] == null)

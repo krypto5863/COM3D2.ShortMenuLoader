@@ -6,6 +6,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Security;
@@ -29,6 +30,7 @@ namespace ShortMenuLoader
 
 		public static float time;
 		public static int ThreadsDone = 0;
+		internal static string[] FilesInModFolder;
 
 		public static BepInEx.Logging.ManualLogSource logger;
 
@@ -42,18 +44,11 @@ namespace ShortMenuLoader
 
 		internal static bool SMVDLoaded = false;
 
-		//internal static SemaphoreSlim FileOpened = new SemaphoreSlim(1);
-		//internal static SemaphoreSlim TextureLoadMutex = new SemaphoreSlim(1);
-		//internal static bool LockDownForThreading = false;
-		//internal static bool LockSetFile = false;
-		//internal static bool LockSetTex = false;
-
 		private void Awake()
 		{
-
 			logger = this.Logger;
 
-			Main.logger.LogDebug("Starting awake now...");
+			Main.logger.LogDebug("Starting SML awake now...");
 
 			@this2 = this;
 
@@ -108,72 +103,7 @@ namespace ShortMenuLoader
 
 			@this2.StartCoroutine(VanillaMenuLoad.LoadCache());
 		}
-		/*
-		[HarmonyPatch(typeof(GameUty), "FileOpen")]
-		[HarmonyPrefix]
-		private static bool LockMutex() 
-		{
-			if (LockDownForThreading)
-			{
-				if (!FileOpened.Wait(5000)) 
-				{
-					Main.logger.LogError("Timed out waiting for the FileOpen mutex to finish!");
-					return false;
-				}
-			}
 
-			return true;
-		}
-
-		[HarmonyPatch(typeof(GameUty), "FileOpen")]
-		[HarmonyFinalizer]
-		private static void UnlockMutex()
-		{
-			if (FileOpened.CurrentCount > 0) 
-			{
-				try
-				{
-					FileOpened.Release();
-				}
-				catch 
-				{
-				}
-			}
-		}
-		[HarmonyPatch(typeof(ImportCM), "LoadTexture")]
-		[HarmonyPrefix]
-		private static bool LockMutex1()
-		{
-			if (LockDownForThreading)
-			{
-				if (!TextureLoadMutex.Wait(5000)) 
-				{
-					Main.logger.LogError("Timed out waiting for the LoadTexture mutex to finish!");
-					return false;
-				} 
-			}
-
-			return true;
-		}
-
-		[HarmonyPatch(typeof(ImportCM), "LoadTexture")]
-		[HarmonyFinalizer]
-		private static void UnlockMutex1()
-		{
-
-			if (TextureLoadMutex.CurrentCount > 0)
-			{
-				try
-				{
-					TextureLoadMutex.Release();
-					//Main.logger.LogDebug("Unlocked the texture loader!");
-				}
-				catch 
-				{
-				}
-			}
-		}
-		*/
 		//Slightly out of scope but it serves to accomadate placing menu paths in descriptions. Silly kiss.
 		[HarmonyPatch(typeof(ItemInfoWnd), "Open")]
 		[HarmonyPostfix]
@@ -244,6 +174,8 @@ namespace ShortMenuLoader
 			ThreadsDone = 0;
 			//Calling it directly after threads are refixed. It'll load the directory in the background while other things load.
 			//Temporarily disabled. It's a wittle buggy.
+
+			FilesInModFolder = Directory.GetFiles(BepInEx.Paths.GameRootPath, "*.*", SearchOption.AllDirectories);
 
 			if (UseIconPreloader.Value) 
 			{

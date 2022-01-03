@@ -129,9 +129,7 @@ namespace ShortMenuLoader
 
 			Task loaderWorker = Task.Factory.StartNew(new Action(() =>
 				{
-					//var watch1 = Stopwatch.StartNew();
-
-					foreach (string s in Directory.GetFiles(path + "\\Mod", "*.menu", SearchOption.AllDirectories))
+					foreach (string s in Main.FilesInModFolder.Where(t => t.ToLower().EndsWith(".menu")))
 					{
 						if (!FilesDictionary.ContainsKey(Path.GetFileName(s).ToLower()))
 						{

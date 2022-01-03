@@ -32,6 +32,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="InfinitePartitioner.cs" />
+    <None Include="LiveDirectory.cs" />
     <Compile Include="Loaders\GSModMenuLoad.cs" />
     <Compile Include="Loaders\VanillaMenuLoaderSMVDCompat.cs" />
     <Compile Include="MenuStub.cs" />

@@ -62,7 +62,7 @@ namespace ShortMenuLoader
 				}));
 				*/
 
-				foreach (var mod in Directory.GetFiles(path + "\\Mod", "*.mod", SearchOption.AllDirectories))
+				foreach (var mod in Main.FilesInModFolder.Where(t => t.ToLower().EndsWith(".mod")))
 				{
 					SceneEdit.SMenuItem mi2 = new SceneEdit.SMenuItem();
 					if (ModMenuLoad.InitModMenuItemScript(mi2, mod, out byte[] icon))

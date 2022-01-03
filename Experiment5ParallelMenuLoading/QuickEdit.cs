@@ -189,7 +189,7 @@ namespace ShortMenuLoader
 				{
 					f_TexInModFolder = new Dictionary<string, string>();
 
-					foreach (string s in Directory.GetFiles(BepInEx.Paths.GameRootPath + "\\Mod", "*.tex", SearchOption.AllDirectories))
+					foreach (string s in Main.FilesInModFolder.Where(t => t.ToLower().EndsWith(".tex")))
 					{
 						if (!f_TexInModFolder.ContainsKey(Path.GetFileName(s).ToLower()))
 						{

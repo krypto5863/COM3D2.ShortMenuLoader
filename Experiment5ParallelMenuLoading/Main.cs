@@ -175,7 +175,7 @@ namespace ShortMenuLoader
 			//Calling it directly after threads are refixed. It'll load the directory in the background while other things load.
 			//Temporarily disabled. It's a wittle buggy.
 
-			FilesInModFolder = Directory.GetFiles(BepInEx.Paths.GameRootPath, "*.*", SearchOption.AllDirectories);
+			FilesInModFolder = Directory.GetFiles(BepInEx.Paths.GameRootPath + "\\Mod", "*.*", SearchOption.AllDirectories);
 
 			if (UseIconPreloader.Value) 
 			{

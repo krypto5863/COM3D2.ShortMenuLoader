@@ -243,7 +243,8 @@ namespace ShortMenuLoader
 
 			foreach (SceneEdit.SMenuItem mi in filesToLoad.Keys)
 			{
-				if (!mi.m_bMan && !GSModMenuLoad.FilesDictionary.ContainsKey(mi.m_strMenuFileName) && Main.@this.editItemTextureCache.IsRegister(mi.m_nMenuFileRID))
+				//Added the CRC checks to make this plug compatible with 3.xx
+				if (!mi.m_bMan && !mi.m_strMenuFileName.Contains("_crc") && !mi.m_strMenuFileName.Contains("crc_") && !GSModMenuLoad.FilesDictionary.ContainsKey(mi.m_strMenuFileName) && Main.@this.editItemTextureCache.IsRegister(mi.m_nMenuFileRID))
 				{
 					AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(Main.@this, new object[] { mi });
 

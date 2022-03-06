@@ -20,7 +20,7 @@ using UnityEngine;
 
 namespace ShortMenuLoader
 {
-	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.5.5")]
+	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.5.6")]
 	[BepInDependency("ShortMenuVanillaDatabase", BepInDependency.DependencyFlags.SoftDependency)]
 	internal class Main : BaseUnityPlugin
 	{
@@ -109,7 +109,8 @@ namespace ShortMenuLoader
 		[HarmonyPostfix]
 		private static void GetInstance(ref ItemInfoWnd __instance)
 		{
-			if (PutMenuFileNameInItemDescription.Value) {
+			if (PutMenuFileNameInItemDescription.Value)
+			{
 				__instance.m_uiInfo.overflowMethod = UILabel.Overflow.ResizeHeight;
 
 				var wrapped = "";
@@ -125,7 +126,7 @@ namespace ShortMenuLoader
 		private static void GetInstance(ref SceneEdit __instance)
 		{
 			WatchOverall.Reset();
-			
+
 			WatchOverall.Start();
 			@this = __instance;
 		}
@@ -177,7 +178,7 @@ namespace ShortMenuLoader
 
 			FilesInModFolder = Directory.GetFiles(BepInEx.Paths.GameRootPath + "\\Mod", "*.*", SearchOption.AllDirectories);
 
-			if (UseIconPreloader.Value) 
+			if (UseIconPreloader.Value)
 			{
 				QuickEdit.EngageModPreloader();
 			}
@@ -248,7 +249,8 @@ namespace ShortMenuLoader
 										return 0;
 									});
 					smenuItem.m_listMember.Sort((SceneEdit.SMenuItem x, SceneEdit.SMenuItem y) => x.m_strMenuFileName.CompareTo(y.m_strMenuFileName));
-				} else if (keyValuePair.Value == null)
+				}
+				else if (keyValuePair.Value == null)
 				{
 					Main.logger.LogError("A key value in menuGroupMemberDic was nulled. This value was skipped for processing as a result.");
 				}
@@ -282,7 +284,7 @@ namespace ShortMenuLoader
 			}
 
 			//for (int nM = 0; nM < menuList.Count; nM++)
-			foreach(SceneEdit.SMenuItem mi in menuList)
+			foreach (SceneEdit.SMenuItem mi in menuList)
 			{
 				//SceneEdit.SMenuItem mi = menuList[nM];
 				if (SceneEditInfo.m_dicPartsTypePair.ContainsKey(mi.m_eColorSetMPN))

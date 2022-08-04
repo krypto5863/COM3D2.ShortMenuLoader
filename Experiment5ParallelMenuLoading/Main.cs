@@ -12,7 +12,6 @@ using System.Reflection.Emit;
 using System.Security;
 using System.Security.Permissions;
 using System.Text.RegularExpressions;
-using System.Threading;
 using UnityEngine;
 
 [module: UnverifiableCode]
@@ -20,7 +19,7 @@ using UnityEngine;
 
 namespace ShortMenuLoader
 {
-	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.5.6")]
+	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.5.7")]
 	[BepInDependency("ShortMenuVanillaDatabase", BepInDependency.DependencyFlags.SoftDependency)]
 	internal class Main : BaseUnityPlugin
 	{
@@ -130,6 +129,7 @@ namespace ShortMenuLoader
 			WatchOverall.Start();
 			@this = __instance;
 		}
+
 		[HarmonyPatch(typeof(SceneEdit), "Start")]
 		[HarmonyTranspiler]
 		private static IEnumerable<CodeInstruction> Transpiler1(IEnumerable<CodeInstruction> instructions)
@@ -153,7 +153,6 @@ namespace ShortMenuLoader
 
 				Main.logger.LogDebug("Calling your modified CoRoutine");
 				@this.StartCoroutine(InitMenuNative());
-
 			}),
 			new CodeInstruction(OpCodes.Pop)
 			)
@@ -161,6 +160,7 @@ namespace ShortMenuLoader
 
 			return custominstruc;
 		}
+
 		private static IEnumerator InitMenuNative()
 		{
 			List<SceneEdit.SMenuItem> menuList = new List<SceneEdit.SMenuItem>();
@@ -208,6 +208,7 @@ namespace ShortMenuLoader
 
 			Main.logger.LogInfo($"Loading completely done at: {WatchOverall.Elapsed}.");
 		}
+
 		private static IEnumerator FixedInitMenu(List<SceneEdit.SMenuItem> menuList, Dictionary<int, SceneEdit.SMenuItem> menuRidDic, Dictionary<int, List<int>> menuGroupMemberDic)
 		{
 			var watch = Stopwatch.StartNew();
@@ -293,7 +294,6 @@ namespace ShortMenuLoader
 					{
 						if (mi.m_strMenuNameInColorSet != null)
 						{
-
 							mi.m_strMenuNameInColorSet = mi.m_strMenuNameInColorSet.Replace("*", ".*");
 							mi.m_listColorSet = @this.m_dicColor[mi.m_eColorSetMPN].FindAll((SceneEdit.SMenuItem i) => new Regex(mi.m_strMenuNameInColorSet).IsMatch(i.m_strMenuFileName));
 						}
@@ -376,7 +376,6 @@ namespace ShortMenuLoader
 					listCategory.Find((SceneEdit.SCategory c) => c.m_eCategory == cate).m_isEnabled = false;
 				}
 			}
-
 
 			@this.UpdatePanel_Category();
 

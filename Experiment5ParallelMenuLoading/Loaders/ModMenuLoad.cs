@@ -1,16 +1,11 @@
-﻿using HarmonyLib;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using TMonitor = System.Threading.Monitor;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
-using System.Diagnostics;
 
 namespace ShortMenuLoader
 {
@@ -154,6 +149,7 @@ namespace ShortMenuLoader
 			Main.ThreadsDone++;
 			Main.logger.LogInfo($".Mods finished loading at: {Main.WatchOverall.Elapsed}");
 		}
+
 		public static bool InitModMenuItemScript(SceneEdit.SMenuItem mi, string f_strModFileName, out byte[] Icon)
 		{
 			Icon = null;

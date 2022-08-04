@@ -6,10 +6,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
 
 namespace ShortMenuLoader
 {
@@ -18,6 +16,7 @@ namespace ShortMenuLoader
 		private static readonly string CacheFile = BepInEx.Paths.CachePath + "\\ShortMenuLoaderVanillaCache.json";
 		private static bool CacheLoadDone = false;
 		private static Dictionary<string, MenuStub> MenuCache = new Dictionary<string, MenuStub>();
+
 		public static IEnumerator LoadCache(int Retry = 0)
 		{
 			CacheLoadDone = false;
@@ -65,6 +64,7 @@ namespace ShortMenuLoader
 			}
 			CacheLoadDone = true;
 		}
+
 		public static IEnumerator SaveCache(Dictionary<SceneEdit.SMenuItem, string> filesToLoad, int Retry = 0)
 		{
 			if (!Main.SMVDLoaded && Main.UseVanillaCache.Value)
@@ -108,6 +108,7 @@ namespace ShortMenuLoader
 				}
 			}
 		}
+
 		public static IEnumerator VanillaMenuLoadStart(List<SceneEdit.SMenuItem> menuList, Dictionary<int, List<int>> menuGroupMemberDic)
 		{
 			Dictionary<SceneEdit.SMenuItem, int> filesToLoadFromDatabase = new Dictionary<SceneEdit.SMenuItem, int>();
@@ -135,8 +136,8 @@ namespace ShortMenuLoader
 
 			//This entire for loop is what loads in normal game menus. It's been left relatively untouched.
 
-			if (!Main.SMVDLoaded) {
-
+			if (!Main.SMVDLoaded)
+			{
 				int fileCount = menuDataBase.GetDataSize();
 
 				for (int i = 0; i < fileCount; i++)
@@ -155,7 +156,8 @@ namespace ShortMenuLoader
 						filesToLoadFromDatabase[mi] = i;
 					}
 				}
-			} else
+			}
+			else
 			{
 				VanillaMenuLoaderSMVDCompat.LoadFromSMVDDictionary(ref filesToLoadFromDatabase);
 			}
@@ -179,11 +181,11 @@ namespace ShortMenuLoader
 						{
 							mi.m_strMenuName = tempStub.Name;
 							mi.m_strInfo = tempStub.Description;
-							mi.m_mpn = (MPN)Enum.Parse(typeof(MPN), tempStub.Category);
-							mi.m_strCateName = tempStub.Category;
-							mi.m_eColorSetMPN = (MPN)Enum.Parse(typeof(MPN), tempStub.ColorSetMPN);
+							mi.m_mpn = tempStub.Category;
+							mi.m_strCateName = Enum.GetName(typeof(MPN), tempStub.Category);
+							mi.m_eColorSetMPN = tempStub.ColorSetMPN;
 							mi.m_strMenuNameInColorSet = tempStub.ColorSetMenu;
-							mi.m_pcMultiColorID = (MaidParts.PARTS_COLOR)Enum.Parse(typeof(MaidParts.PARTS_COLOR), tempStub.MultiColorID);
+							mi.m_pcMultiColorID = tempStub.MultiColorID;
 							mi.m_boDelOnly = tempStub.DelMenu;
 							mi.m_fPriority = tempStub.Priority;
 							mi.m_bMan = tempStub.ManMenu;
@@ -207,7 +209,7 @@ namespace ShortMenuLoader
 					filesToLoad[mi] = null;
 
 					if (!string.IsNullOrEmpty(iconFileName) && GameUty.FileSystem.IsExistentFile(iconFileName))
-					{	
+					{
 						/*
 						if (SceneEdit.Instance != null)
 						{
@@ -236,7 +238,7 @@ namespace ShortMenuLoader
 				}
 			}
 
-			while (GSModMenuLoad.DictionaryBuilt == false) 
+			while (GSModMenuLoad.DictionaryBuilt == false)
 			{
 				yield return null;
 			}
@@ -280,9 +282,9 @@ namespace ShortMenuLoader
 			}
 
 			Main.ThreadsDone++;
-			Main.logger.LogInfo($"Vanilla menus finished loading at: {Main.WatchOverall.Elapsed}. " 
-			+ ((Main.SMVDLoaded == false) ? 
-			$"We also spent {waitOnKiss.Elapsed} waiting for an unmodified database to finish loading..." 
+			Main.logger.LogInfo($"Vanilla menus finished loading at: {Main.WatchOverall.Elapsed}. "
+			+ ((Main.SMVDLoaded == false) ?
+			$"We also spent {waitOnKiss.Elapsed} waiting for an unmodified database to finish loading..."
 			: $"We also spent {waitOnKiss.Elapsed} waiting for SMVD's Database to load..."));
 
 			Main.@this.StartCoroutine(SaveCache(filesToLoad));
@@ -313,10 +315,10 @@ namespace ShortMenuLoader
 					{
 						Name = mi.m_strMenuName,
 						Description = mi.m_strInfo,
-						Category = mi.m_mpn.ToString(),
-						ColorSetMPN = mi.m_eColorSetMPN.ToString(),
+						Category = mi.m_mpn,
+						ColorSetMPN = mi.m_eColorSetMPN,
 						ColorSetMenu = mi.m_strMenuNameInColorSet,
-						MultiColorID = mi.m_pcMultiColorID.ToString(),
+						MultiColorID = mi.m_pcMultiColorID,
 						DelMenu = mi.m_boDelOnly,
 						Priority = mi.m_fPriority,
 						ManMenu = mi.m_bMan,

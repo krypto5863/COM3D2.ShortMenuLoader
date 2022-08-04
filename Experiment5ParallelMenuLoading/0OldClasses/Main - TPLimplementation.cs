@@ -21,7 +21,6 @@ namespace Experiment5ParallelMenuLoading
 	[BepInPlugin("Experiment5ParallelMenuLoading", "Experiment5ParallelMenuLoading", "1.0.0.0")]
 	public class Main : BaseUnityPlugin
 	{
-
 		public static Harmony harmony;
 		public static SceneEdit @this;
 		public static Main @this2;
@@ -84,14 +83,12 @@ namespace Experiment5ParallelMenuLoading
 			new CodeInstruction(OpCodes.Ldarg_0),
 			Transpilers.EmitDelegate<Action>(() =>
 			{
-
 				Main.logger.LogInfo("Calling your test coroutine.");
 
 				//InitMenuNativeRe();
 				@this2.StartCoroutine(LoadIcons());
 				@this2.StartCoroutine(test2());
 				//test2();
-
 			}),
 			new CodeInstruction(OpCodes.Pop)
 			)
@@ -102,7 +99,6 @@ namespace Experiment5ParallelMenuLoading
 		}
 		public static IEnumerator test2()
 		{
-
 			Stopwatch test = new Stopwatch();
 
 			Main.logger.LogError("Coroutine was successfully engaged!");
@@ -221,7 +217,7 @@ namespace Experiment5ParallelMenuLoading
 
 			SetupDone = true;
 
-			while (IconLoadDone != true) 
+			while (IconLoadDone != true)
 			{
 				yield return null;
 			}
@@ -319,8 +315,6 @@ namespace Experiment5ParallelMenuLoading
 				{
 					NDebug.Assert(false, "メニュースクリプトが読めませんでした。" + f_strMenuFileName);
 				}
-
-
 			}
 			catch (Exception ex)
 			{
@@ -337,7 +331,6 @@ namespace Experiment5ParallelMenuLoading
 			}
 			return true;
 		}
-
 
 		public static bool InitMenuItemScript(SceneEdit.SMenuItem mi, string f_strMenuFileName, bool f_bMan, out string IconTex)
 		{
@@ -565,7 +558,7 @@ namespace Experiment5ParallelMenuLoading
 
 		public static IEnumerator LoadIcons()
 		{
-			while (SetupDone == false || ListOfIconLoads.Count > 1) 
+			while (SetupDone == false || ListOfIconLoads.Count > 1)
 			{
 				if (ListOfIconLoads.Count == 0)
 				{
@@ -573,13 +566,11 @@ namespace Experiment5ParallelMenuLoading
 				}
 				else
 				{
-
 					Main.logger.LogError("Icon Coroutine is loading an icon...");
 
 					ListOfIconLoads.Keys.ElementAt(0).m_texIcon = ImportCM.CreateTexture(ListOfIconLoads[ListOfIconLoads.Keys.ElementAt(0)]);
 					ListOfContinues.Enqueue(ListOfIconLoads.Keys.ElementAt(0));
 					ListOfIconLoads.TryRemove(ListOfIconLoads.Keys.ElementAt(0), out _);
-
 				}
 			}
 
@@ -593,7 +584,7 @@ namespace Experiment5ParallelMenuLoading
 			yield return null;
 		}
 		/*
-		public static IEnumerator LoadTexture(SceneEdit.SMenuItem menu, string texture) 
+		public static IEnumerator LoadTexture(SceneEdit.SMenuItem menu, string texture)
 		{
 			menu.m_texIcon = ImportCM.CreateTexture(texture);
 

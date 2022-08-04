@@ -51,10 +51,8 @@ namespace Experiment5ParallelMenuLoading
 			new CodeInstruction(OpCodes.Ldarg_0),
 			Transpilers.EmitDelegate<Action>(() =>
 			{
-
 				Main.logger.LogDebug("Calling your control test coroutine.");
 				@this2.StartCoroutine(InitMenuNative());
-
 			}),
 			new CodeInstruction(OpCodes.Pop)
 			)

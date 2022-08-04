@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 
 namespace ShortMenuLoader
@@ -24,10 +21,10 @@ namespace ShortMenuLoader
 
 		public string TextureName { get; private set; } = string.Empty;
 
-		private PreloadTexture(Texture2D tex) 
+		private PreloadTexture(Texture2D tex)
 		{
 			Texture = tex;
-		} 
+		}
 
 		public PreloadTexture(int width, int height, TextureFormat format, ref Rect[] uvRects, ref byte[] data, string texName = null)
 		{
@@ -43,7 +40,7 @@ namespace ShortMenuLoader
 			this.data = data;
 		}
 
-		public Texture2D CreateTexture2D() 
+		public Texture2D CreateTexture2D()
 		{
 			if (Texture == null)
 			{

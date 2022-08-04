@@ -21,7 +21,6 @@ namespace Experiment5ParallelMenuLoading
 	[BepInPlugin("Experiment5ParallelMenuLoading", "Experiment5ParallelMenuLoading", "1.0.0.0")]
 	public class Main : BaseUnityPlugin
 	{
-
 		public static Harmony harmony;
 		public static SceneEdit @this;
 		public static Main @this2;
@@ -29,7 +28,6 @@ namespace Experiment5ParallelMenuLoading
 		public static HashSet<SceneEdit.SMenuItem> ListOfContinues = new HashSet<SceneEdit.SMenuItem>();
 		private static bool SetupDone = false;
 		private static bool IconLoadDone = false;
-
 
 		/*
 		static Dictionary<int, SceneEdit.SMenuItem> menuRidDicThreadSafe;
@@ -92,7 +90,6 @@ namespace Experiment5ParallelMenuLoading
 			new CodeInstruction(OpCodes.Ldarg_0),
 			Transpilers.EmitDelegate<Action>(() =>
 			{
-
 				Main.logger.LogInfo("Calling your test coroutine.");
 
 				//InitMenuNativeRe();
@@ -101,7 +98,6 @@ namespace Experiment5ParallelMenuLoading
 				@this2.StartCoroutine(InitialBackgroundWorker());
 				//@this2.StartCoroutine(MenuLoaderWorker());
 				//test2();
-
 			}),
 			new CodeInstruction(OpCodes.Pop)
 			)
@@ -112,7 +108,6 @@ namespace Experiment5ParallelMenuLoading
 		}
 		public static IEnumerator InitialBackgroundWorker()
 		{
-
 			Main.logger.LogError("Coroutine was successfully engaged!");
 
 			while (GameMain.Instance.CharacterMgr.IsBusy())
@@ -232,7 +227,7 @@ namespace Experiment5ParallelMenuLoading
 			{
 				var keyPair = ListOfIconLoads.FirstOrDefault();
 
-				if (keyPair.Key == null || keyPair.Value == null) 
+				if (keyPair.Key == null || keyPair.Value == null)
 				{
 					ListOfIconLoads.Remove(keyPair.Key);
 					continue;
@@ -263,10 +258,9 @@ namespace Experiment5ParallelMenuLoading
 			//foreach (SceneEdit.SMenuItem mi2 in ListOfContinues)
 			while (ListOfContinues.Count > 0)
 			{
-
 				var mi2 = ListOfContinues.FirstOrDefault();
 
-				if (mi2 == null) 
+				if (mi2 == null)
 				{
 					continue;
 				}
@@ -340,7 +334,6 @@ namespace Experiment5ParallelMenuLoading
 			test.Reset();
 
 			yield break;
-
 		}/*
 		public static IEnumerator MenuLoaderWorker()
 		{

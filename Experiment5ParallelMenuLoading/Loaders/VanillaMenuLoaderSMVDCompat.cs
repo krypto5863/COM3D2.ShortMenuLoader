@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace ShortMenuLoader
 {
-	class VanillaMenuLoaderSMVDCompat
+	internal class VanillaMenuLoaderSMVDCompat
 	{
-		internal static void ReadMenuItemDataFromNative(SceneEdit.SMenuItem mi, int menuDataBaseIndex, out string iconStr) 
+		internal static void ReadMenuItemDataFromNative(SceneEdit.SMenuItem mi, int menuDataBaseIndex, out string iconStr)
 		{
 			var menuDataBase = ShortMenuVanillaDatabase.Main.Database.MenusList;
 			mi.m_strMenuName = menuDataBase[menuDataBaseIndex].Name;
@@ -29,12 +27,11 @@ namespace ShortMenuLoader
 			}
 		}
 
-
 		internal static void LoadFromSMVDDictionary(ref Dictionary<SceneEdit.SMenuItem, int> filesToLoadFromDatabase)
 		{
-			foreach (KeyValuePair<int, ShortMenuVanillaDatabase.CacheFile.MenuStub> menu in ShortMenuVanillaDatabase.Main.Database.MenusList)
+			foreach (var menu in ShortMenuVanillaDatabase.Main.Database.MenusList)
 			{
-				string fileName = menu.Value.FileName;
+				string fileName = menu.FileName;
 
 				if (GameMain.Instance.CharacterMgr.status.IsHavePartsItem(fileName))
 				{
@@ -44,7 +41,7 @@ namespace ShortMenuLoader
 						m_nMenuFileRID = fileName.GetHashCode()
 					};
 
-					filesToLoadFromDatabase[mi] = menu.Key;
+					filesToLoadFromDatabase[mi] = Array.FindIndex(ShortMenuVanillaDatabase.Main.Database.MenusList, r => r.Equals(menu));
 				}
 			}
 		}

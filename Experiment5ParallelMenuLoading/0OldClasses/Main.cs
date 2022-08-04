@@ -20,7 +20,6 @@ namespace Experiment5ParallelMenuLoading
 	[BepInPlugin("Experiment5ParallelMenuLoading", "Experiment5ParallelMenuLoading", "1.0.0.0")]
 	public class Main : BaseUnityPlugin
 	{
-
 		public static Harmony harmony;
 		public static SceneEdit @this;
 		public static Main @this2;
@@ -85,7 +84,6 @@ namespace Experiment5ParallelMenuLoading
 			new CodeInstruction(OpCodes.Ldarg_0),
 			Transpilers.EmitDelegate<Action>(() =>
 			{
-
 				Main.logger.LogInfo("Calling your test coroutine.");
 
 				ListOfContinues = new Dictionary<SceneEdit.SMenuItem, string>();
@@ -98,7 +96,6 @@ namespace Experiment5ParallelMenuLoading
 				@this.StartCoroutine(SetupTexturesCoRoutine());
 				Task.Factory.StartNew(new Action(() => test2()));
 				//Task.Factory.StartNew(new Action(() => Test2Continuation()));
-
 			}),
 			new CodeInstruction(OpCodes.Pop)
 			)
@@ -109,7 +106,6 @@ namespace Experiment5ParallelMenuLoading
 		}
 		public static void test2()
 		{
-
 			Main.logger.LogError("Coroutine was successfully engaged!");
 
 			while (GameMain.Instance.CharacterMgr.IsBusy())
@@ -216,8 +212,6 @@ namespace Experiment5ParallelMenuLoading
 				Main.logger.LogError("Finished GetMenuItemSetUP: " + test2.Elapsed);
 			}//);
 
-
-
 			//@this2.StartCoroutine(SetupTexturesCoRoutine(menuList, menuGroupMemberDic));
 
 			SavedmenuList = menuList;
@@ -227,10 +221,9 @@ namespace Experiment5ParallelMenuLoading
 
 		public static IEnumerator SetupTexturesCoRoutine()
 		{
-
 			Main.logger.LogError($"Starting coroutine to set textures to menu items.");
 
-			while (Test2Done != true) 
+			while (Test2Done != true)
 			{
 				yield return null;
 			}
@@ -248,7 +241,7 @@ namespace Experiment5ParallelMenuLoading
 
 			Test2Continuation();
 
-			while (Test2ContinuatonDone == false) 
+			while (Test2ContinuatonDone == false)
 			{
 				yield return null;
 			}
@@ -278,7 +271,7 @@ namespace Experiment5ParallelMenuLoading
 
 			int i = 0;
 
-			while (i < ListOfContinues.Keys.Count()) 
+			while (i < ListOfContinues.Keys.Count())
 			{
 				Main.logger.LogError("Relooping for.");
 
@@ -287,7 +280,7 @@ namespace Experiment5ParallelMenuLoading
 
 				Main.logger.LogError("Creating task...");
 
-				while (d < 1 && i < ListOfContinues.Keys.Count()) 
+				while (d < 1 && i < ListOfContinues.Keys.Count())
 				{
 					int index = i;
 					taskList.Add(Task.Factory.StartNew(new Action(() => ContinueSetup(list[index]))));
@@ -302,7 +295,7 @@ namespace Experiment5ParallelMenuLoading
 				//Main.logger.LogError($"Waiting for tasks to complete: {taskList.Count}");
 
 				Task.WaitAll(taskList.ToArray());
-				
+
 				Main.logger.LogError("All tasks complete. Starting a new batch.");
 			}
 
@@ -318,7 +311,7 @@ namespace Experiment5ParallelMenuLoading
 			//yield break;
 		}
 
-		public static void ContinueSetup(SceneEdit.SMenuItem mi2) 		
+		public static void ContinueSetup(SceneEdit.SMenuItem mi2)
 		{
 			Stopwatch test2 = new Stopwatch();
 
@@ -371,7 +364,6 @@ namespace Experiment5ParallelMenuLoading
 
 		public static bool GetMenuItemSetUP(SceneEdit.SMenuItem mi, string f_strMenuFileName, out string IconTex, bool f_bMan = false)
 		{
-
 			IconTex = null;
 
 			if (f_strMenuFileName.Contains("_zurashi"))
@@ -391,8 +383,6 @@ namespace Experiment5ParallelMenuLoading
 				{
 					NDebug.Assert(false, "メニュースクリプトが読めませんでした。" + f_strMenuFileName);
 				}
-
-
 			}
 			catch (Exception ex)
 			{
@@ -409,7 +399,6 @@ namespace Experiment5ParallelMenuLoading
 			}
 			return true;
 		}
-
 
 		public static bool InitMenuItemScript(SceneEdit.SMenuItem mi, string f_strMenuFileName, bool f_bMan, out string IconTex)
 		{
@@ -635,7 +624,6 @@ namespace Experiment5ParallelMenuLoading
 			return true;
 		}
 
-
 		public static IEnumerator ThrowConcurrentException(string error)
 		{
 			Main.logger.LogError("A concurrent thread ran into this error: " + error);
@@ -643,7 +631,7 @@ namespace Experiment5ParallelMenuLoading
 			yield return null;
 		}
 		/*
-		public static IEnumerator LoadTexture(SceneEdit.SMenuItem menu, string texture) 
+		public static IEnumerator LoadTexture(SceneEdit.SMenuItem menu, string texture)
 		{
 			menu.m_texIcon = ImportCM.CreateTexture(texture);
 

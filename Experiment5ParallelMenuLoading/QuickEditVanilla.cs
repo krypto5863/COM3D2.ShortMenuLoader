@@ -1,19 +1,12 @@
 ﻿using HarmonyLib;
-using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace ShortMenuLoader
 {
-	class QuickEditVanilla
+	internal class QuickEditVanilla
 	{
 		internal static Dictionary<int, string> f_RidsToStubs = new Dictionary<int, string>();
 		private static ConcurrentDictionary<string, TextureResource> f_ProcessedTextures = new ConcurrentDictionary<string, TextureResource>();
@@ -36,7 +29,6 @@ namespace ShortMenuLoader
 		[HarmonyPrefix]
 		private static bool GetTextureByRid(ref Texture2D __result, int __0)
 		{
-
 			if (f_RidsToStubs.ContainsKey(__0))
 			{
 				__result = GetTexture(__0);
@@ -46,6 +38,7 @@ namespace ShortMenuLoader
 
 			return true;
 		}
+
 		//Checks if we have the icon and says yes, look no further.
 		[HarmonyPatch(typeof(EditItemTextureCache), "IsRegister")]
 		[HarmonyPrefix]

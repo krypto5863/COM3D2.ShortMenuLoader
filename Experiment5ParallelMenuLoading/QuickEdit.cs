@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -7,11 +6,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using TMonitor = System.Threading.Monitor;
 using UnityEngine;
+using TMonitor = System.Threading.Monitor;
 
 namespace ShortMenuLoader
 {
@@ -19,11 +17,12 @@ namespace ShortMenuLoader
 	{
 		private static long AmountOfDataPreloaded;
 
-		//A cache of files 
+		//A cache of files
 		private static Dictionary<string, string> f_TexInModFolder = null;
 
 		//Will be accessed in a concurrent modality frequently. Locking is slow.
 		internal static Dictionary<int, string> f_RidsToStubs = new Dictionary<int, string>();
+
 		private static readonly ConcurrentDictionary<string, PreloadTexture> f_ProcessedTextures = new ConcurrentDictionary<string, PreloadTexture>();
 
 		//Should only be used in a non-concurrent modality.
@@ -41,6 +40,7 @@ namespace ShortMenuLoader
 				Main.@this.StartCoroutine(f_TextureLoaderCoroute);
 			}
 		}
+
 		//Despite how it may appear, this is used, it's patched manually in Main.Awake
 		private static void MenuItemSet(ref SceneEdit.SMenuItem __1)
 		{
@@ -79,11 +79,11 @@ namespace ShortMenuLoader
 
 			return true;
 		}
+
 		[HarmonyPatch(typeof(SceneEditWindow.CustomViewItem), "UpdateIcon")]
 		[HarmonyPrefix]
 		private static void UpdateIcon(ref SceneEditWindow.CustomViewItem __instance, Maid __0)
 		{
-
 			if (__0 == null)
 			{
 				__0 = GameMain.Instance.CharacterMgr.GetMaid(0);
@@ -102,11 +102,11 @@ namespace ShortMenuLoader
 			}
 			else if (menuItem.m_texIcon == null || menuItem.m_texIcon == Texture2D.whiteTexture)
 			{
-				if (f_RidsToStubs.ContainsKey(menuItem.m_nMenuFileRID)) 
+				if (f_RidsToStubs.ContainsKey(menuItem.m_nMenuFileRID))
 				{
 					menuItem.m_texIcon = GetTexture(menuItem.m_nMenuFileRID);
 					menuItem.m_texIconRandomColor = menuItem.m_texIcon;
-				} 
+				}
 			}
 		}
 
@@ -122,12 +122,11 @@ namespace ShortMenuLoader
 
 			if (Main.UseIconPreloader.Value == false)
 			{
-
 				if (ModDirScanned)
 				{
 					var fetchedResource = LoadTextureFromModFolder(textureFileName);
 
-					if (fetchedResource != null) 
+					if (fetchedResource != null)
 					{
 						return fetchedResource.CreateTexture2D();
 					}
@@ -213,7 +212,7 @@ namespace ShortMenuLoader
 
 				var watch2 = Stopwatch.StartNew();
 
-				var modQueue = new ConcurrentQueue<string>(f_RidsToStubs.Values.Where(val =>  !f_ProcessedTextures.ContainsKey(val) && !f_LoadedTextures.ContainsKey(val)));
+				var modQueue = new ConcurrentQueue<string>(f_RidsToStubs.Values.Where(val => !f_ProcessedTextures.ContainsKey(val) && !f_LoadedTextures.ContainsKey(val)));
 
 				Main.logger.LogInfo($"Starting preloader... GC at {GC.GetTotalMemory(false) / 1000000}");
 
@@ -222,7 +221,6 @@ namespace ShortMenuLoader
 				{
 					if (modQueue.Count > 0 && modQueue.TryDequeue(out var key))
 					{
-
 						var loadedTex = LoadTextureFromModFolder(key);
 
 						if (loadedTex != null)
@@ -329,7 +327,7 @@ namespace ShortMenuLoader
 
 					int num7 = binaryReader.ReadInt32();
 
-					if (num7 > binaryReader.BaseStream.Length) 
+					if (num7 > binaryReader.BaseStream.Length)
 					{
 						Array.Resize(ref array, 0);
 						Main.logger.LogWarning($"{f_strFileName} may be corrupted. The loader will use a white texture instead. Please correct the issue or expect large RAM usage spikes.");
@@ -377,7 +375,7 @@ namespace ShortMenuLoader
 		}
 
 		/*
-		public static void OverlayIcon(ref Texture2D texture2D) 
+		public static void OverlayIcon(ref Texture2D texture2D)
 		{
 			Material systemMaterial = GameUty.GetSystemMaterial(GameUty.SystemMaterial.Alpha);
 
@@ -390,7 +388,7 @@ namespace ShortMenuLoader
 				TempRender.DiscardContents();
 			}
 
-			if (ModIconOverlayLoaded == null) 
+			if (ModIconOverlayLoaded == null)
 			{
 				ModIconOverlayLoaded = new Texture2D(80,80);
 				ModIconOverlayLoaded.LoadImage(ModIconOverlay);

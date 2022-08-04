@@ -1,17 +1,14 @@
-﻿using HarmonyLib;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using TMonitor = System.Threading.Monitor;
 using UnityEngine;
+using TMonitor = System.Threading.Monitor;
 
 namespace ShortMenuLoader
 {
@@ -29,7 +26,6 @@ namespace ShortMenuLoader
 
 		public static IEnumerator LoadCache(int Retry = 0)
 		{
-
 			CacheLoadDone = false;
 
 			Task cacheLoader = Task.Factory.StartNew(new Action(() =>
@@ -73,6 +69,7 @@ namespace ShortMenuLoader
 				}
 			}
 		}
+
 		public static IEnumerator SaveCache(int Retry = 0)
 		{
 			Task cacheSaver = Task.Factory.StartNew(new Action(() =>
@@ -81,7 +78,7 @@ namespace ShortMenuLoader
 				.Where(k => FilesDictionary.Keys.Contains(k.Key))
 				.ToDictionary(t => t.Key, l => l.Value);
 
-				File.WriteAllText(CacheFile, JsonConvert.SerializeObject(MenuCache));
+				File.WriteAllText(CacheFile, JsonConvert.SerializeObject(MenuCache, Formatting.Indented));
 
 				Main.logger.LogDebug("Finished cleaning and saving the mod cache...");
 			}));
@@ -111,6 +108,7 @@ namespace ShortMenuLoader
 				}
 			}
 		}
+
 		public static IEnumerator GSMenuLoadStart(List<SceneEdit.SMenuItem> menuList, Dictionary<int, List<int>> menuGroupMemberDic)
 		{
 			HashSet<SceneEdit.SMenuItem> listOfLoads = new HashSet<SceneEdit.SMenuItem>();
@@ -122,7 +120,6 @@ namespace ShortMenuLoader
 			FilesDictionary.Clear();
 
 			DictionaryBuilt = false;
-
 
 			var cts = new CancellationTokenSource();
 			var token = cts.Token;
@@ -424,7 +421,6 @@ namespace ShortMenuLoader
 
 			Main.@this.StartCoroutine(SaveCache());
 
-
 			if (listOfDuplicates.Count > 0)
 			{
 				Main.logger.LogWarning($"There are {listOfDuplicates.Count} duplicate menus in your mod folder!");
@@ -474,6 +470,7 @@ namespace ShortMenuLoader
 
 			return true;
 		}
+
 		public static bool InitMenuItemScript(SceneEdit.SMenuItem mi, string f_strMenuFileName, out string IconTex)
 		{
 			IconTex = null;
@@ -501,34 +498,17 @@ namespace ShortMenuLoader
 							mi.m_strInfo = tempStub.Description;
 						}
 
-						if (tempStub.Category != null)
-						{
-							mi.m_strCateName = tempStub.Category;
-							mi.m_mpn = (MPN)Enum.Parse(typeof(MPN), tempStub.Category);
-						}
-						else
-						{
-							mi.m_mpn = MPN.null_mpn;
-						}
+						mi.m_strCateName = Enum.GetName(typeof(MPN), tempStub.Category);
+						mi.m_mpn = tempStub.Category;
 
-						if (tempStub.ColorSetMPN != null)
-						{
-							mi.m_eColorSetMPN = (MPN)Enum.Parse(typeof(MPN), tempStub.ColorSetMPN);
-						}
+						mi.m_eColorSetMPN = tempStub.ColorSetMPN;
 
 						if (tempStub.ColorSetMenu != null)
 						{
 							mi.m_strMenuNameInColorSet = tempStub.ColorSetMenu;
 						}
 
-						if (tempStub.MultiColorID == null)
-						{
-							mi.m_pcMultiColorID = MaidParts.PARTS_COLOR.NONE;
-						}
-						else if (tempStub.MultiColorID != null)
-						{
-							mi.m_pcMultiColorID = (MaidParts.PARTS_COLOR)Enum.Parse(typeof(MaidParts.PARTS_COLOR), tempStub.MultiColorID);
-						}
+						mi.m_pcMultiColorID = tempStub.MultiColorID;
 
 						mi.m_boDelOnly = tempStub.DelMenu;
 
@@ -681,11 +661,11 @@ namespace ShortMenuLoader
 								{
 									string strCateName = stringList[1].ToLower();
 									mi.m_strCateName = strCateName;
-									cacheEntry.Category = mi.m_strCateName;
+									cacheEntry.Category = (MPN)Enum.Parse(typeof(MPN), mi.m_strCateName);
 									try
 									{
 										mi.m_mpn = (MPN)Enum.Parse(typeof(MPN), mi.m_strCateName);
-										cacheEntry.Category = mi.m_mpn.ToString();
+										cacheEntry.Category = mi.m_mpn;
 									}
 									catch
 									{
@@ -706,7 +686,7 @@ namespace ShortMenuLoader
 									try
 									{
 										mi.m_eColorSetMPN = (MPN)Enum.Parse(typeof(MPN), stringList[1].ToLower());
-										cacheEntry.ColorSetMPN = mi.m_eColorSetMPN.ToString();
+										cacheEntry.ColorSetMPN = mi.m_eColorSetMPN;
 									}
 									catch
 									{
@@ -742,7 +722,7 @@ namespace ShortMenuLoader
 										return false;
 									}
 									mi.m_pcMultiColorID = pcMultiColorID;
-									cacheEntry.MultiColorID = mi.m_pcMultiColorID.ToString();
+									cacheEntry.MultiColorID = mi.m_pcMultiColorID;
 								}
 							}
 							else if (stringCom == "icon" || stringCom == "icons")

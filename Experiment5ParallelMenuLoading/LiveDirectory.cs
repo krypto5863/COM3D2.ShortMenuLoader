@@ -44,11 +44,11 @@ namespace ShortMenuLoader
 				if (args1.ChangeType == WatcherChangeTypes.Created)
 				{
 					FilesInDirectory.Add(args1.FullPath);
-				} 
-				else if (args1.ChangeType == WatcherChangeTypes.Deleted) 
+				}
+				else if (args1.ChangeType == WatcherChangeTypes.Deleted)
 				{
 					FilesInDirectory.Remove(args1.FullPath);
-				} 
+				}
 			}
 		}
 

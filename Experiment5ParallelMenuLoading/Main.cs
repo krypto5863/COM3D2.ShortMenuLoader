@@ -19,19 +19,19 @@ using UnityEngine;
 
 namespace ShortMenuLoader
 {
-	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.5.7")]
+	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.5.8")]
 	[BepInDependency("ShortMenuVanillaDatabase", BepInDependency.DependencyFlags.SoftDependency)]
 	internal class Main : BaseUnityPlugin
 	{
-		private Harmony harmony;
-		public static Main this2;
-		public static SceneEdit @this;
+		private Harmony _harmony;
+		public static Main PlugInstance;
+		public static SceneEdit SceneEditInstance;
 
-		public static float time;
-		public static int ThreadsDone = 0;
+		public static float Time;
+		public static int ThreadsDone;
 		internal static string[] FilesInModFolder;
 
-		public static BepInEx.Logging.ManualLogSource logger;
+		public static BepInEx.Logging.ManualLogSource PLogger;
 
 		public static Stopwatch WatchOverall = new Stopwatch();
 		public static ConfigEntry<float> BreakInterval;
@@ -41,23 +41,23 @@ namespace ShortMenuLoader
 		public static ConfigEntry<bool> PutMenuFileNameInItemDescription;
 		public static ConfigEntry<bool> UseIconPreloader;
 
-		internal static bool SMVDLoaded = false;
+		internal static bool SmvdLoaded;
 
 		private void Awake()
 		{
-			logger = this.Logger;
+			PLogger = Logger;
 
-			Main.logger.LogDebug("Starting SML awake now...");
+			PLogger.LogDebug("Starting SML awake now...");
 
-			@this2 = this;
+			PlugInstance = this;
 
 			//We set our patcher so we can call it back and patch dynamically as needed.
-			harmony = Harmony.CreateAndPatchAll(typeof(Main));
+			_harmony = Harmony.CreateAndPatchAll(typeof(Main));
 
 			MethodBase menuItemSetConstructor = typeof(SceneEdit)
 			.GetNestedType("MenuItemSet", BindingFlags.NonPublic)
 			.GetConstructor(
-			new Type[]
+			new[]
 			{ typeof(GameObject),
 			typeof(SceneEdit.SMenuItem),
 			typeof(string),
@@ -66,41 +66,41 @@ namespace ShortMenuLoader
 
 			if (BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("ShortMenuVanillaDatabase"))
 			{
-				Main.logger.LogDebug("SMVD is loaded! Optimizing for SMVD!");
+				PLogger.LogDebug("SMVD is loaded! Optimizing for SMVD!");
 
-				SMVDLoaded = true;
+				SmvdLoaded = true;
 			}
 			else
 			{
-				Main.logger.LogWarning("SMVD is not loaded! Consider installing ShortMenuVanillaDatabase for even better performance!");
+				PLogger.LogWarning("SMVD is not loaded! Consider installing ShortMenuVanillaDatabase for even better performance!");
 			}
 
-			MethodBase colorItemSetConstructor = typeof(SceneEdit).GetNestedType("ColorItemSet", BindingFlags.NonPublic).GetConstructor(new Type[] { typeof(GameObject), typeof(SceneEdit.SMenuItem) });
+			MethodBase colorItemSetConstructor = typeof(SceneEdit).GetNestedType("ColorItemSet", BindingFlags.NonPublic).GetConstructor(new[] { typeof(GameObject), typeof(SceneEdit.SMenuItem) });
 
-			harmony.PatchAll(typeof(QuickEdit));
-			harmony.PatchAll(typeof(QuickEditVanilla));
+			_harmony.PatchAll(typeof(QuickEdit));
+			_harmony.PatchAll(typeof(QuickEditVanilla));
 
-			harmony.Patch(menuItemSetConstructor, new HarmonyMethod(typeof(QuickEdit), "MenuItemSet"));
-			harmony.Patch(colorItemSetConstructor, new HarmonyMethod(typeof(QuickEdit), "MenuItemSet"));
+			_harmony.Patch(menuItemSetConstructor, new HarmonyMethod(typeof(QuickEdit), "MenuItemSet"));
+			_harmony.Patch(colorItemSetConstructor, new HarmonyMethod(typeof(QuickEdit), "MenuItemSet"));
 
-			@this2.StartCoroutine(GSModMenuLoad.LoadCache());
+			PlugInstance.StartCoroutine(GsModMenuLoad.LoadCache());
 
 			BreakInterval = Config.Bind("General", "Time Between Breaks in Seconds", 0.5f, "The break interval is the time between each break that the co-routine takes where it returns processing back to the main thread. After one frame, processing is given back to the co-routine. Higher values can help with low-end processing times but can cause instability if set too high. If after all of this you're still confused, leave it alone.");
 
 			TimeoutLimit = Config.Bind("General", "Mutex Timeout Limit", 50000, "The time in milliseconds to wait for a mutex to unlock before declaring it stalled and restarting the work task. Raise this if you're getting erroneous timed out waiting for mutex errors. Higher values are perfectly safe but you'll be waiting around longer if an error really does occur and the mutex never unlocks. Values below the default are not recommended, this can and will cause errors.");
 
-			if (!SMVDLoaded)
+			if (!SmvdLoaded)
 			{
-				UseVanillaCache = Config.Bind("General", "Use Vanilla Cache", false, "This decides whether a vanilla cache is created, maintained and used on load. Kiss has it's own questionable implementation of a cache, but this cache is questionable in it's own right too. Disabled when you use SMVD.");
+				UseVanillaCache = Config.Bind("General", "Use Vanilla Cache", false, "SceneEditInstance decides whether a vanilla cache is created, maintained and used on load. Kiss has it's own questionable implementation of a cache, but this cache is questionable in it's own right too. Disabled when you use SMVD.");
 			}
 
-			ChangeModPriority = Config.Bind("General", "Add 10,000 to Mod Item Priority", false, "This option simply adds 10,000 priority to all mod items loaded. Handy if you don't want mod items mix and matching with vanilla stuff or appearing before the remove button.");
+			ChangeModPriority = Config.Bind("General", "Add 10,000 to Mod Item Priority", false, "SceneEditInstance option simply adds 10,000 priority to all mod items loaded. Handy if you don't want mod items mix and matching with vanilla stuff or appearing before the remove button.");
 
-			PutMenuFileNameInItemDescription = Config.Bind("General", "Append Menu file Names to Descriptions", false, "This option appends menu file names to the descriptions of the items. Useful for modders or for users looking to take out certain mods. Will not work if activated when already in edit mode.");
+			PutMenuFileNameInItemDescription = Config.Bind("General", "Append Menu file Names to Descriptions", false, "SceneEditInstance option appends menu file names to the descriptions of the items. Useful for modders or for users looking to take out certain mods. Will not work if activated when already in edit mode.");
 
 			UseIconPreloader = Config.Bind("General", "Whether to use the IconPreloader for mod files.", true, "In some users with weaker computers, this can cause massive slowdowns or ram over-usage. For these users, it might be more desirable to leave this off.");
 
-			@this2.StartCoroutine(VanillaMenuLoad.LoadCache());
+			PlugInstance.StartCoroutine(VanillaMenuLoad.LoadCache());
 		}
 
 		//Slightly out of scope but it serves to accomadate placing menu paths in descriptions. Silly kiss.
@@ -108,16 +108,16 @@ namespace ShortMenuLoader
 		[HarmonyPostfix]
 		private static void GetInstance(ref ItemInfoWnd __instance)
 		{
-			if (PutMenuFileNameInItemDescription.Value)
+			if (!PutMenuFileNameInItemDescription.Value)
 			{
-				__instance.m_uiInfo.overflowMethod = UILabel.Overflow.ResizeHeight;
-
-				var wrapped = "";
-
-				__instance.m_uiInfo.Wrap(__instance.m_uiInfo.text, out wrapped);
-
-				__instance.m_uiInfo.text = wrapped;
+				return;
 			}
+
+			__instance.m_uiInfo.overflowMethod = UILabel.Overflow.ResizeHeight;
+
+			__instance.m_uiInfo.Wrap(__instance.m_uiInfo.text, out var wrapped);
+
+			__instance.m_uiInfo.text = wrapped;
 		}
 
 		[HarmonyPatch(typeof(SceneEdit), "Start")]
@@ -127,14 +127,14 @@ namespace ShortMenuLoader
 			WatchOverall.Reset();
 
 			WatchOverall.Start();
-			@this = __instance;
+			SceneEditInstance = __instance;
 		}
 
 		[HarmonyPatch(typeof(SceneEdit), "Start")]
 		[HarmonyTranspiler]
 		private static IEnumerable<CodeInstruction> Transpiler1(IEnumerable<CodeInstruction> instructions)
 		{
-			IEnumerable<CodeInstruction> custominstruc = new CodeMatcher(instructions)
+			var customInstruction = new CodeMatcher(instructions)
 			.MatchForward(false,
 			new CodeMatch(OpCodes.Ldarg_0),
 			new CodeMatch(OpCodes.Ldarg_0),
@@ -147,50 +147,50 @@ namespace ShortMenuLoader
 			.Insert(
 			new CodeInstruction(OpCodes.Ldarg_0),
 			new CodeInstruction(OpCodes.Ldarg_0),
-			Transpilers.EmitDelegate<Action<SceneEdit>>((lthis) =>
+			Transpilers.EmitDelegate<Action<SceneEdit>>(sceneEdit =>
 			{
-				@this = lthis;
+				SceneEditInstance = sceneEdit;
 
-				Main.logger.LogDebug("Calling your modified CoRoutine");
-				@this.StartCoroutine(InitMenuNative());
+				PLogger.LogDebug("Calling your modified CoRoutine");
+				SceneEditInstance.StartCoroutine(InitMenuNative());
 			}),
 			new CodeInstruction(OpCodes.Pop)
 			)
 			.InstructionEnumeration();
 
-			return custominstruc;
+			return customInstruction;
 		}
 
 		private static IEnumerator InitMenuNative()
 		{
-			List<SceneEdit.SMenuItem> menuList = new List<SceneEdit.SMenuItem>();
-			Dictionary<int, List<int>> menuGroupMemberDic = new Dictionary<int, List<int>>();
+			var menuList = new List<SceneEdit.SMenuItem>();
+			var menuGroupMemberDic = new Dictionary<int, List<int>>();
 
-			@this.m_menuRidDic = new Dictionary<int, SceneEdit.SMenuItem>();
+			SceneEditInstance.m_menuRidDic = new Dictionary<int, SceneEdit.SMenuItem>();
 
-			//We set time so the coroutines to be called can coordinate themselves.
-			time = Time.realtimeSinceStartup;
+			//We set time so the co-routines to be called can coordinate themselves.
+			Time = UnityEngine.Time.realtimeSinceStartup;
 
-			//Setting threads back to 0 incase last load had a higher number.
+			//Setting threads back to 0 in-case last load had a higher number.
 			ThreadsDone = 0;
 			//Calling it directly after threads are refixed. It'll load the directory in the background while other things load.
 			//Temporarily disabled. It's a wittle buggy.
 
-			FilesInModFolder = Directory.GetFiles(BepInEx.Paths.GameRootPath + "\\Mod", "*.*", SearchOption.AllDirectories);
+			FilesInModFolder = Directory.GetFiles(Paths.GameRootPath + "\\Mod", "*.*", SearchOption.AllDirectories);
 
 			if (UseIconPreloader.Value)
 			{
-				QuickEdit.EngageModPreloader();
+				QuickEdit.EngageModPreLoader();
 			}
 
-			Main.@this.InitCategoryList();
+			SceneEditInstance.InitCategoryList();
 
-			Main.logger.LogInfo($"Files began loading at: {WatchOverall.Elapsed}");
+			PLogger.LogInfo($"Files began loading at: {WatchOverall.Elapsed}");
 
 			//These coroutines hold the loading code for each type of item related file.
-			this2.StartCoroutine(GSModMenuLoad.GSMenuLoadStart(menuList, menuGroupMemberDic));
-			this2.StartCoroutine(ModMenuLoad.ModMenuLoadStart(menuList, menuGroupMemberDic));
-			this2.StartCoroutine(VanillaMenuLoad.VanillaMenuLoadStart(menuList, menuGroupMemberDic));
+			PlugInstance.StartCoroutine(GsModMenuLoad.GsMenuLoadStart(menuList, menuGroupMemberDic));
+			PlugInstance.StartCoroutine(ModMenuLoad.ModMenuLoadStart(menuList, menuGroupMemberDic));
+			PlugInstance.StartCoroutine(VanillaMenuLoad.VanillaMenuLoadStart(menuList, menuGroupMemberDic));
 
 			//In a sorta async fashion, while the threads are no complete, the coroutine will pass on processing to someone else.
 			while (ThreadsDone != 3)
@@ -198,66 +198,53 @@ namespace ShortMenuLoader
 				yield return null;
 			}
 
-			Main.logger.LogInfo($"All loaders finished at: {WatchOverall.Elapsed}.");
+			PLogger.LogInfo($"All loaders finished at: {WatchOverall.Elapsed}.");
 
 			//Calls the final function to complete setting up menu items.
-			yield return @this.StartCoroutine(Main.FixedInitMenu(menuList, @this.m_menuRidDic, menuGroupMemberDic));
+			yield return SceneEditInstance.StartCoroutine(FixedInitMenu(menuList, SceneEditInstance.m_menuRidDic, menuGroupMemberDic));
 
 			//Does something...
-			yield return @this.StartCoroutine(@this.CoLoadWait());
+			yield return SceneEditInstance.StartCoroutine(SceneEditInstance.CoLoadWait());
 
-			Main.logger.LogInfo($"Loading completely done at: {WatchOverall.Elapsed}.");
+			PLogger.LogInfo($"Loading completely done at: {WatchOverall.Elapsed}.");
 		}
 
-		private static IEnumerator FixedInitMenu(List<SceneEdit.SMenuItem> menuList, Dictionary<int, SceneEdit.SMenuItem> menuRidDic, Dictionary<int, List<int>> menuGroupMemberDic)
+		private static IEnumerator FixedInitMenu(List<SceneEdit.SMenuItem> menuList, IDictionary<int, SceneEdit.SMenuItem> menuRidDic, Dictionary<int, List<int>> menuGroupMemberDic)
 		{
 			var watch = Stopwatch.StartNew();
 
-			float time = Time.realtimeSinceStartup;
+			var time = UnityEngine.Time.realtimeSinceStartup;
 
-			List<SceneEdit.SCategory> listCategory = @this.m_listCategory;
+			var listCategory = SceneEditInstance.m_listCategory;
 
-			foreach (KeyValuePair<int, List<int>> keyValuePair in menuGroupMemberDic)
+			foreach (var keyValuePair in menuGroupMemberDic)
 			{
 				if (menuRidDic.ContainsKey(keyValuePair.Key) && keyValuePair.Value.Count >= 1 && keyValuePair.Value != null)
 				{
-					SceneEdit.SMenuItem smenuItem = menuRidDic[keyValuePair.Key];
-					smenuItem.m_bGroupLeader = true;
-					smenuItem.m_listMember = new List<SceneEdit.SMenuItem>();
-					smenuItem.m_listMember.Add(smenuItem);
+					var sMenuItem = menuRidDic[keyValuePair.Key];
+					sMenuItem.m_bGroupLeader = true;
+					sMenuItem.m_listMember = new List<SceneEdit.SMenuItem> { sMenuItem };
 
-					for (int n = 0; n < keyValuePair.Value.Count; n++)
+					foreach (var t in keyValuePair.Value)
 					{
-						smenuItem.m_listMember.Add(menuRidDic[keyValuePair.Value[n]]);
-						smenuItem.m_listMember[smenuItem.m_listMember.Count - 1].m_bMember = true;
-						smenuItem.m_listMember[smenuItem.m_listMember.Count - 1].m_leaderMenu = smenuItem;
+						sMenuItem.m_listMember.Add(menuRidDic[t]);
+						sMenuItem.m_listMember[sMenuItem.m_listMember.Count - 1].m_bMember = true;
+						sMenuItem.m_listMember[sMenuItem.m_listMember.Count - 1].m_leaderMenu = sMenuItem;
 					}
 
-					smenuItem.m_listMember.Sort(delegate (SceneEdit.SMenuItem x, SceneEdit.SMenuItem y)
-									{
-										if (x.m_fPriority == y.m_fPriority)
-										{
-											return 0;
-										}
-										if (x.m_fPriority < y.m_fPriority)
-										{
-											return -1;
-										}
-										if (x.m_fPriority > y.m_fPriority)
-										{
-											return 1;
-										}
-										return 0;
-									});
-					smenuItem.m_listMember.Sort((SceneEdit.SMenuItem x, SceneEdit.SMenuItem y) => x.m_strMenuFileName.CompareTo(y.m_strMenuFileName));
+					sMenuItem.m_listMember.Sort((x, y) => x.m_fPriority == y.m_fPriority ? 0 :
+						x.m_fPriority < y.m_fPriority ? -1 :
+						x.m_fPriority > y.m_fPriority ? 1 : 0);
+
+					sMenuItem.m_listMember.Sort((x, y) => string.Compare(x.m_strMenuFileName, y.m_strMenuFileName, StringComparison.Ordinal));
 				}
 				else if (keyValuePair.Value == null)
 				{
-					Main.logger.LogError("A key value in menuGroupMemberDic was nulled. This value was skipped for processing as a result.");
+					PLogger.LogError("A key value in menuGroupMemberDic was nulled. SceneEditInstance value was skipped for processing as a result.");
 				}
 			}
 
-			foreach (KeyValuePair<MPN, SceneEditInfo.CCateNameType> keyValuePair2 in SceneEditInfo.m_dicPartsTypePair)
+			foreach (var keyValuePair2 in SceneEditInfo.m_dicPartsTypePair)
 			{
 				if (keyValuePair2.Value.m_eType == SceneEditInfo.CCateNameType.EType.Slider)
 				{
@@ -272,7 +259,7 @@ namespace ShortMenuLoader
 						m_requestFBFace = keyValuePair2.Value.m_requestFBFace
 					}});
 					*/
-					@this.AddMenuItemToList(new SceneEdit.SMenuItem
+					SceneEditInstance.AddMenuItemToList(new SceneEdit.SMenuItem
 					{
 						m_mpn = keyValuePair2.Key,
 						m_nSliderValue = 500,
@@ -285,28 +272,30 @@ namespace ShortMenuLoader
 			}
 
 			//for (int nM = 0; nM < menuList.Count; nM++)
-			foreach (SceneEdit.SMenuItem mi in menuList)
+			foreach (var mi in menuList)
 			{
 				//SceneEdit.SMenuItem mi = menuList[nM];
-				if (SceneEditInfo.m_dicPartsTypePair.ContainsKey(mi.m_eColorSetMPN))
+				if (!SceneEditInfo.m_dicPartsTypePair.ContainsKey(mi.m_eColorSetMPN))
 				{
-					if (mi.m_eColorSetMPN != MPN.null_mpn)
+					continue;
+				}
+
+				if (mi.m_eColorSetMPN != MPN.null_mpn)
+				{
+					if (mi.m_strMenuNameInColorSet != null)
 					{
-						if (mi.m_strMenuNameInColorSet != null)
-						{
-							mi.m_strMenuNameInColorSet = mi.m_strMenuNameInColorSet.Replace("*", ".*");
-							mi.m_listColorSet = @this.m_dicColor[mi.m_eColorSetMPN].FindAll((SceneEdit.SMenuItem i) => new Regex(mi.m_strMenuNameInColorSet).IsMatch(i.m_strMenuFileName));
-						}
-						else
-						{
-							mi.m_listColorSet = @this.m_dicColor[mi.m_eColorSetMPN];
-						}
+						mi.m_strMenuNameInColorSet = mi.m_strMenuNameInColorSet.Replace("*", ".*");
+						mi.m_listColorSet = SceneEditInstance.m_dicColor[mi.m_eColorSetMPN].FindAll(i => new Regex(mi.m_strMenuNameInColorSet).IsMatch(i.m_strMenuFileName));
 					}
-					if (0.5f < Time.realtimeSinceStartup - time)
+					else
 					{
-						yield return null;
-						time = Time.realtimeSinceStartup;
+						mi.m_listColorSet = SceneEditInstance.m_dicColor[mi.m_eColorSetMPN];
 					}
+				}
+				if (0.5f < UnityEngine.Time.realtimeSinceStartup - time)
+				{
+					yield return null;
+					time = UnityEngine.Time.realtimeSinceStartup;
 				}
 			}
 
@@ -324,65 +313,64 @@ namespace ShortMenuLoader
 			}
 			*/
 
-			foreach (SceneEdit.SCategory scategory in listCategory)
+			foreach (var sCategory in listCategory)
 			{
-				scategory.SortPartsType();
-				scategory.SortItem();
+				sCategory.SortPartsType();
+				sCategory.SortItem();
 
-				if (scategory.m_eCategory == SceneEditInfo.EMenuCategory.プリセット || scategory.m_eCategory == SceneEditInfo.EMenuCategory.ランダム || scategory.m_eCategory == SceneEditInfo.EMenuCategory.プロフィ\u30FCル || scategory.m_eCategory == SceneEditInfo.EMenuCategory.着衣設定)
+				if (sCategory.m_eCategory == SceneEditInfo.EMenuCategory.プリセット || sCategory.m_eCategory == SceneEditInfo.EMenuCategory.ランダム || sCategory.m_eCategory == SceneEditInfo.EMenuCategory.プロフィ\u30FCル || sCategory.m_eCategory == SceneEditInfo.EMenuCategory.着衣設定)
 				{
-					scategory.m_isEnabled = true;
+					sCategory.m_isEnabled = true;
 				}
 				else
 				{
-					scategory.m_isEnabled = false;
-					foreach (SceneEdit.SPartsType spartsType in scategory.m_listPartsType)
+					sCategory.m_isEnabled = false;
+					foreach (var sPartsType in sCategory.m_listPartsType)
 					{
-						if (spartsType.m_isEnabled)
+						if (!sPartsType.m_isEnabled)
 						{
-							scategory.m_isEnabled = true;
-							break;
+							continue;
 						}
+
+						sCategory.m_isEnabled = true;
+						break;
 					}
 				}
 			}
 
-			if (@this.modeType == SceneEdit.ModeType.CostumeEdit)
+			if (SceneEditInstance.modeType == SceneEdit.ModeType.CostumeEdit)
 			{
-				SceneEditInfo.EMenuCategory[] array = new SceneEditInfo.EMenuCategory[]
+				var array = new[]
 				{
 				SceneEditInfo.EMenuCategory.セット,
 				SceneEditInfo.EMenuCategory.プリセット,
 				SceneEditInfo.EMenuCategory.ランダム,
 				SceneEditInfo.EMenuCategory.プロフィ\u30FCル
 				};
-				SceneEditInfo.EMenuCategory[] array2 = array;
-				for (int l = 0; l < array2.Length; l++)
+				foreach (var category in array)
 				{
-					SceneEditInfo.EMenuCategory cate = array2[l];
-					listCategory.Find((SceneEdit.SCategory c) => c.m_eCategory == cate).m_isEnabled = false;
+					var category1 = category;
+					listCategory.Find(c => c.m_eCategory == category1).m_isEnabled = false;
 				}
 			}
-			else if (@this.maid.status.heroineType == HeroineType.Sub || @this.maid.boNPC)
+			else if (SceneEditInstance.maid.status.heroineType == HeroineType.Sub || SceneEditInstance.maid.boNPC)
 			{
-				SceneEditInfo.EMenuCategory[] array3 = new SceneEditInfo.EMenuCategory[]
+				var array3 = new[]
 				{
 				SceneEditInfo.EMenuCategory.プロフィ\u30FCル
 				};
-				SceneEditInfo.EMenuCategory[] array4 = array3;
-				for (int m = 0; m < array4.Length; m++)
+				foreach (var category in array3)
 				{
-					SceneEditInfo.EMenuCategory cate = array4[m];
-					listCategory.Find((SceneEdit.SCategory c) => c.m_eCategory == cate).m_isEnabled = false;
+					var category1 = category;
+					listCategory.Find(c => c.m_eCategory == category1).m_isEnabled = false;
 				}
 			}
 
-			@this.UpdatePanel_Category();
+			SceneEditInstance.UpdatePanel_Category();
 
-			Main.logger.LogInfo($"FixedInitMenu done in {watch.Elapsed}");
+			PLogger.LogInfo($"FixedInitMenu done in {watch.Elapsed}");
 
 			//AccessTools.Method(typeof(SceneEdit), "UpdatePanel_Category").Invoke(@this, null);
-			yield break;
 		}
 	}
 }

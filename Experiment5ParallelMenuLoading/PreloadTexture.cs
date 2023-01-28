@@ -3,68 +3,70 @@ using UnityEngine;
 
 namespace ShortMenuLoader
 {
-	internal class PreloadTexture
+	internal class PreLoadTexture
 	{
-		public static PreloadTexture WhiteTexture = new PreloadTexture(Texture2D.whiteTexture);
+		public static PreLoadTexture WhiteTexture = new PreLoadTexture(Texture2D.whiteTexture);
 
-		private readonly int width;
+		private readonly int _width;
 
-		private readonly int height;
+		private readonly int _height;
 
-		private readonly TextureFormat format;
+		private readonly TextureFormat _format;
 
-		private Rect[] uvRects = null;
+		private Rect[] _uvRects;
 
-		private byte[] data = null;
+		private byte[] _data;
 
-		private Texture2D Texture = null;
+		private Texture2D _texture;
 
-		public string TextureName { get; private set; } = string.Empty;
+		public string TextureName { get; } = string.Empty;
 
-		private PreloadTexture(Texture2D tex)
+		private PreLoadTexture(Texture2D tex)
 		{
-			Texture = tex;
+			_texture = tex;
 		}
 
-		public PreloadTexture(int width, int height, TextureFormat format, ref Rect[] uvRects, ref byte[] data, string texName = null)
+		public PreLoadTexture(int width, int height, TextureFormat format, ref Rect[] uvRects, ref byte[] data, string texName = null)
 		{
-			this.width = width;
-			this.height = height;
-			this.format = format;
-			this.TextureName = texName ?? string.Empty;
+			_width = width;
+			_height = height;
+			_format = format;
+			TextureName = texName ?? string.Empty;
 			if (uvRects != null && 0 < uvRects.Length)
 			{
-				this.uvRects = uvRects;
+				_uvRects = uvRects;
 			}
 
-			this.data = data;
+			_data = data;
 		}
 
 		public Texture2D CreateTexture2D()
 		{
-			if (Texture == null)
+			if (_texture != null)
 			{
-				try
-				{
-					Texture = new Texture2D(width, height, format, false);
-					Texture.LoadImage(data);
-				}
-				catch (Exception ex)
-				{
-					Main.logger.LogError($"Failed to create texture {TextureName} with an issue of: {ex.Message}\n" +
-						$"Image Params: {width}x{height} {format.ToString()}\n" +
-						$"We will return a blank texture as a placeholder. Please correct the file as it may have an issue...");
-					Texture = Texture2D.whiteTexture;
-				}
-
-				Array.Resize(ref data, 0);
-				Array.Resize(ref uvRects, 0);
-
-				data = null;
-				uvRects = null;
+				return _texture;
 			}
 
-			return Texture;
+			try
+			{
+				_texture = new Texture2D(_width, _height, _format, false);
+				_texture.LoadImage(_data);
+			}
+			catch (Exception ex)
+			{
+				Main.PLogger.LogError($"Failed to create texture {TextureName} with an issue of: {ex.Message}\n" +
+									  $"Image Params: {_width}x{_height} {_format.ToString()}\n" +
+									  "We will return a blank texture as a placeholder. Please correct the file as it may have an issue...");
+				_texture = Texture2D.whiteTexture;
+			}
+
+			Array.Resize(ref _data, 0);
+			Array.Resize(ref _uvRects, 0);
+
+			_data = null;
+			_uvRects = null;
+
+			return _texture;
 		}
 	}
 }

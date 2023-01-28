@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>ShortMenuLoader</RootNamespace>
-    <AssemblyName>ShortMenuLoader.Plugin</AssemblyName>
+    <AssemblyName>COM3D2.ShortMenuLoader</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -31,15 +31,13 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="InfinitePartitioner.cs" />
-    <None Include="LiveDirectory.cs" />
+    <Compile Include="TimedWaitUntil.cs" />
     <Compile Include="Loaders\GSModMenuLoad.cs" />
     <Compile Include="Loaders\VanillaMenuLoaderSMVDCompat.cs" />
     <Compile Include="MenuStub.cs" />
     <Compile Include="Loaders\ModMenuLoad.cs" />
     <None Include="packages.config" />
-    <None Include="ParallelWhile.cs" />
-    <Compile Include="PreloadTexture.cs" />
+    <Compile Include="PreLoadTexture.cs" />
     <Compile Include="QuickEdit.cs" />
     <Compile Include="Loaders\VanillaMenuLoad.cs" />
     <Compile Include="QuickEditVanilla.cs" />

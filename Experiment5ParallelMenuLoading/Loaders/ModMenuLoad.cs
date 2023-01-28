@@ -15,11 +15,9 @@ namespace ShortMenuLoader
 
 		public static IEnumerator ModMenuLoadStart(List<SceneEdit.SMenuItem> menuList, Dictionary<int, List<int>> menuGroupMemberDic)
 		{
-			Dictionary<SceneEdit.SMenuItem, byte[]> modIconLoads = new Dictionary<SceneEdit.SMenuItem, byte[]>();
+			var modIconLoads = new Dictionary<SceneEdit.SMenuItem, byte[]>();
 
-			string path = BepInEx.Paths.GameRootPath;
-
-			Task loaderWorker = Task.Factory.StartNew(new Action(() =>
+			var loaderWorker = Task.Factory.StartNew(() =>
 			{
 				//Mutex dicLock = new Mutex();
 
@@ -44,23 +42,23 @@ namespace ShortMenuLoader
 							}
 							else
 							{
-								Main.logger.LogError($"Timed out waiting for mutex to allow entry...");
+								Main.PLogger.LogError($"Timed out waiting for mutex to allow entry...");
 							}
 						}
 						catch
 						{
-							Main.logger.LogError("Couldn't read .mod file at: " + mod);
+							Main.PLogger.LogError("Couldn't read .mod file at: " + mod);
 						}
 					}
 
-					Main.logger.LogInfo($"After loading all .mod files, we have allocated: {GC.GetTotalMemory(false) * 0.000001}");
+					Main.PLogger.LogInfo($"After loading all .mod files, we have allocated: {GC.GetTotalMemory(false) * 0.000001}");
 				}));
 				*/
 
 				foreach (var mod in Main.FilesInModFolder.Where(t => t.ToLower().EndsWith(".mod")))
 				{
-					SceneEdit.SMenuItem mi2 = new SceneEdit.SMenuItem();
-					if (ModMenuLoad.InitModMenuItemScript(mi2, mod, out byte[] icon))
+					var mi2 = new SceneEdit.SMenuItem();
+					if (InitModMenuItemScript(mi2, mod, out var icon))
 					{
 						modIconLoads[mi2] = icon;
 					}
@@ -71,109 +69,109 @@ namespace ShortMenuLoader
 				/*
 				if (servantWorker.IsFaulted)
 				{
-					Main.logger.LogError($"Servant task failed due to an unexpected error!");
+					Main.PLogger.LogError($"Servant task failed due to an unexpected error!");
 
 					throw servantWorker.Exception;
 				}
 
 				servantWorker.Dispose();
 				*/
-			}));
+			});
 
-			while (!loaderWorker.IsCompleted)
+			if (!loaderWorker.IsCompleted)
 			{
-				yield return null;
+				yield return new TimedWaitUntil(() => loaderWorker.IsCompleted, 0.5f);
 			}
 
 			if (loaderWorker.IsFaulted)
 			{
-				Main.logger.LogWarning($"Worker task failed due to an unexpected error! This is considered a full failure: {loaderWorker.Exception.InnerException.Message}\n{loaderWorker.Exception.InnerException.StackTrace}\n\nwe will try restarting the load task...");
+				Main.PLogger.LogWarning($"Worker task failed due to an unexpected error! SceneEditInstance is considered a full failure: {loaderWorker.Exception.InnerException.Message}\n{loaderWorker.Exception.InnerException.StackTrace}\n\nwe will try restarting the load task...");
 
 				yield return new WaitForSecondsRealtime(2);
 
-				Main.@this.StartCoroutine(ModMenuLoad.ModMenuLoadStart(menuList, menuGroupMemberDic));
+				Main.SceneEditInstance.StartCoroutine(ModMenuLoadStart(menuList, menuGroupMemberDic));
 
 				yield break;
 			}
 
-			foreach (KeyValuePair<SceneEdit.SMenuItem, byte[]> kv in modIconLoads)
+			foreach (var kv in modIconLoads)
 			{
 				kv.Key.m_texIcon = new Texture2D(1, 1, TextureFormat.RGBA32, false);
 				kv.Key.m_texIcon.LoadImage(kv.Value);
 			}
 
 			//We wait until the manager is not busy because starting work while the manager is busy causes egregious bugs.
-			while (GameMain.Instance.CharacterMgr.IsBusy())
+			if (GameMain.Instance.CharacterMgr.IsBusy())
 			{
-				yield return null;
+				yield return new TimedWaitUntil(() => GameMain.Instance.CharacterMgr.IsBusy() == false, 0.5f);
 			}
 
-			foreach (SceneEdit.SMenuItem mi2 in modIconLoads.Keys)
+			foreach (var mi2 in modIconLoads.Keys)
 			{
 				//AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(Main.@this, new object[] { mi2 });
-				Main.@this.AddMenuItemToList(mi2);
+				Main.SceneEditInstance.AddMenuItemToList(mi2);
 				//this.AddMenuItemToList(mi2);
 				menuList.Add(mi2);
-				if (!Main.@this.m_menuRidDic.ContainsKey(mi2.m_nMenuFileRID))
+				if (!Main.SceneEditInstance.m_menuRidDic.ContainsKey(mi2.m_nMenuFileRID))
 				{
-					Main.@this.m_menuRidDic.Add(mi2.m_nMenuFileRID, mi2);
+					Main.SceneEditInstance.m_menuRidDic.Add(mi2.m_nMenuFileRID, mi2);
 				}
 				else
 				{
-					Main.@this.m_menuRidDic[mi2.m_nMenuFileRID] = mi2;
+					Main.SceneEditInstance.m_menuRidDic[mi2.m_nMenuFileRID] = mi2;
 				}
 				//string parentMenuName = AccessTools.Method(typeof(SceneEdit), "GetParentMenuFileName").Invoke(Main.@this, new object[] { mi2 }) as string;
-				string parentMenuName = SceneEdit.GetParentMenuFileName(mi2);
+				var parentMenuName = SceneEdit.GetParentMenuFileName(mi2);
 				//string parentMenuName = SceneEdit.GetParentMenuFileName(mi2);
 				if (!string.IsNullOrEmpty(parentMenuName))
 				{
-					int hashCode = parentMenuName.GetHashCode();
+					var hashCode = parentMenuName.GetHashCode();
 					if (!menuGroupMemberDic.ContainsKey(hashCode))
 					{
 						menuGroupMemberDic.Add(hashCode, new List<int>());
 					}
 					menuGroupMemberDic[hashCode].Add(mi2.m_strMenuFileName.ToLower().GetHashCode());
 				}
-				else if (mi2.m_strCateName.IndexOf("set_") != -1 && mi2.m_strMenuFileName.IndexOf("_del") == -1)
+				else if (mi2.m_strCateName.IndexOf("set_", StringComparison.Ordinal) != -1 && mi2.m_strMenuFileName.IndexOf("_del", StringComparison.Ordinal) == -1)
 				{
 					mi2.m_bGroupLeader = true;
-					mi2.m_listMember = new List<SceneEdit.SMenuItem>();
-					mi2.m_listMember.Add(mi2);
+					mi2.m_listMember = new List<SceneEdit.SMenuItem> { mi2 };
 				}
-				if (Main.BreakInterval.Value < Time.realtimeSinceStartup - Main.time)
+
+				if (Main.BreakInterval.Value < Time.realtimeSinceStartup - Main.Time)
 				{
 					yield return null;
-					Main.time = Time.realtimeSinceStartup;
+					Main.Time = Time.realtimeSinceStartup;
 				}
 			}
 			Main.ThreadsDone++;
-			Main.logger.LogInfo($".Mods finished loading at: {Main.WatchOverall.Elapsed}");
+			Main.PLogger.LogInfo($".Mods finished loading at: {Main.WatchOverall.Elapsed}");
 		}
 
-		public static bool InitModMenuItemScript(SceneEdit.SMenuItem mi, string f_strModFileName, out byte[] Icon)
+		public static bool InitModMenuItemScript(SceneEdit.SMenuItem mi, string fStrModFileName, out byte[] icon)
 		{
-			Icon = null;
+			icon = null;
 
 			try
 			{
-				using (var fileStream = new FileStream(f_strModFileName, FileMode.Open))
-				using (BinaryReader binaryReader = new BinaryReader(fileStream, Encoding.UTF8))
+				using (var fileStream = new FileStream(fStrModFileName, FileMode.Open))
+				using (var binaryReader = new BinaryReader(fileStream, Encoding.UTF8))
 				{
-					string text = binaryReader.ReadString();
+					var text = binaryReader.ReadString();
 					if (text != "CM3D2_MOD")
 					{
-						Main.logger.LogError("InitModMenuItemScript (例外 : ヘッダーファイルが不正です。) The following header for this file indicates that this is not a mod file: " + text + " @ " + f_strModFileName);
+						Main.PLogger.LogError("InitModMenuItemScript (例外 : ヘッダーファイルが不正です。) The following header for this file indicates that this is not a mod file: " + text + " @ " + fStrModFileName);
 
 						return false;
 					}
 					binaryReader.ReadInt32();
-					string text2 = binaryReader.ReadString();
+					var text2 = binaryReader.ReadString();
 					binaryReader.ReadString();
-					string strMenuName = binaryReader.ReadString();
-					string strCateName = binaryReader.ReadString();
-					string text4 = binaryReader.ReadString();
-					string text5 = binaryReader.ReadString();
-					MPN mpn = MPN.null_mpn;
+					var strMenuName = binaryReader.ReadString();
+					var strCateName = binaryReader.ReadString();
+					var text4 = binaryReader.ReadString();
+					var text5 = binaryReader.ReadString();
+					MPN mpn;
 
 					try
 					{
@@ -181,26 +179,26 @@ namespace ShortMenuLoader
 					}
 					catch
 					{
-						Main.logger.LogError("(カテゴリがありません。) There is no category called: " + text5 + " @ " + f_strModFileName);
+						Main.PLogger.LogError("(カテゴリがありません。) There is no category called: " + text5 + " @ " + fStrModFileName);
 
 						return false;
 					}
-					string text6 = string.Empty;
+					var text6 = string.Empty;
 
 					if (mpn != MPN.null_mpn)
 					{
 						text6 = binaryReader.ReadString();
 					}
 
-					string s = binaryReader.ReadString();
-					int num2 = binaryReader.ReadInt32();
-					Dictionary<string, byte[]> dictionary = new Dictionary<string, byte[]>();
+					var s = binaryReader.ReadString();
+					var num2 = binaryReader.ReadInt32();
+					var dictionary = new Dictionary<string, byte[]>();
 
-					for (int i = 0; i < num2; i++)
+					for (var i = 0; i < num2; i++)
 					{
-						string key = binaryReader.ReadString();
-						int count = binaryReader.ReadInt32();
-						byte[] value = binaryReader.ReadBytes(count);
+						var key = binaryReader.ReadString();
+						var count = binaryReader.ReadInt32();
+						var value = binaryReader.ReadBytes(count);
 						dictionary.Add(key, value);
 					}
 
@@ -208,7 +206,7 @@ namespace ShortMenuLoader
 					fileStream.Close();
 
 					mi.m_bMod = true;
-					mi.m_strMenuFileName = Path.GetFileName(f_strModFileName);
+					mi.m_strMenuFileName = Path.GetFileName(fStrModFileName);
 					mi.m_nMenuFileRID = mi.m_strMenuFileName.ToLower().GetHashCode();
 					mi.m_strMenuName = strMenuName;
 					mi.m_strInfo = text4.Replace("《改行》", "\n");
@@ -216,7 +214,7 @@ namespace ShortMenuLoader
 
 					if (Main.PutMenuFileNameInItemDescription.Value)
 					{
-						mi.m_strInfo = mi.m_strInfo + $"\n\n{Path.GetFileName(f_strModFileName)}";
+						mi.m_strInfo += $"\n\n{Path.GetFileName(fStrModFileName)}";
 					}
 
 					try
@@ -225,7 +223,7 @@ namespace ShortMenuLoader
 					}
 					catch
 					{
-						Main.logger.LogWarning("(カテゴリがありません。) There is no category called: " + mi.m_strCateName + " @ " + f_strModFileName);
+						Main.PLogger.LogWarning("(カテゴリがありません。) There is no category called: " + mi.m_strCateName + " @ " + fStrModFileName);
 						mi.m_mpn = MPN.null_mpn;
 					}
 
@@ -241,39 +239,38 @@ namespace ShortMenuLoader
 					if (!string.IsNullOrEmpty(text2))
 					{
 						//byte[] data = dictionary[text2];
-						Icon = dictionary[text2];
+						icon = dictionary[text2];
 						//mi.m_texIcon = new Texture2D(1, 1, TextureFormat.RGBA32, false);
 						//mi.m_texIcon.LoadImage(data);
 					}
 
 					mi.m_fPriority = 999f;
 
-					using (StringReader stringReader = new StringReader(s))
+					using (var stringReader = new StringReader(s))
 					{
-						string empty = string.Empty;
 						string text7;
 						while ((text7 = stringReader.ReadLine()) != null)
 						{
-							string[] array = text7.Split(new char[]
+							var array = text7.Split(new[]
 							{
 					'\t',
 					' '
 							}, StringSplitOptions.RemoveEmptyEntries);
 							if (array[0] == "テクスチャ変更")
 							{
-								MaidParts.PARTS_COLOR pcMultiColorID = MaidParts.PARTS_COLOR.NONE;
+								var pcMultiColorId = MaidParts.PARTS_COLOR.NONE;
 								if (array.Length == 6)
 								{
-									string text8 = array[5];
+									var text8 = array[5];
 									try
 									{
-										pcMultiColorID = (MaidParts.PARTS_COLOR)Enum.Parse(typeof(MaidParts.PARTS_COLOR), text8.ToUpper());
+										pcMultiColorId = (MaidParts.PARTS_COLOR)Enum.Parse(typeof(MaidParts.PARTS_COLOR), text8.ToUpper());
 									}
 									catch
 									{
-										Main.logger.LogError("(無限色IDがありません。) There is no infinite color ID called: " + text8 + " @ " + f_strModFileName);
+										Main.PLogger.LogError("(無限色IDがありません。) There is no infinite color ID called: " + text8 + " @ " + fStrModFileName);
 									}
-									mi.m_pcMultiColorID = pcMultiColorID;
+									mi.m_pcMultiColorID = pcMultiColorId;
 								}
 							}
 						}
@@ -282,7 +279,7 @@ namespace ShortMenuLoader
 			}
 			catch (Exception ex)
 			{
-				Main.logger.LogError("InitModMenuItemScript The following MOD item menu file could not be loaded (MODアイテムメニューファイルが読み込めませんでした。) : " + f_strModFileName + "\n\n" + ex.Message + "\n" + ex.StackTrace);
+				Main.PLogger.LogError("InitModMenuItemScript The following MOD item menu file could not be loaded (MODアイテムメニューファイルが読み込めませんでした。) : " + fStrModFileName + "\n\n" + ex.Message + "\n" + ex.StackTrace);
 				return false;
 			}
 			return true;

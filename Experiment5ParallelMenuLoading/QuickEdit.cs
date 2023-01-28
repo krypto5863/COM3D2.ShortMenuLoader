@@ -15,52 +15,55 @@ namespace ShortMenuLoader
 {
 	internal static class QuickEdit
 	{
-		private static long AmountOfDataPreloaded;
+		private static long _amountOfDataPreloaded;
 
 		//A cache of files
-		private static Dictionary<string, string> f_TexInModFolder = null;
+		private static Dictionary<string, string> _fTexInModFolder;
 
 		//Will be accessed in a concurrent modality frequently. Locking is slow.
-		internal static Dictionary<int, string> f_RidsToStubs = new Dictionary<int, string>();
+		internal static Dictionary<int, string> FRidsToStubs = new Dictionary<int, string>();
 
-		private static readonly ConcurrentDictionary<string, PreloadTexture> f_ProcessedTextures = new ConcurrentDictionary<string, PreloadTexture>();
+		private static readonly ConcurrentDictionary<string, PreLoadTexture> FProcessedTextures = new ConcurrentDictionary<string, PreLoadTexture>();
 
 		//Should only be used in a non-concurrent modality.
-		private static Dictionary<string, Texture2D> f_LoadedTextures = new Dictionary<string, Texture2D>();
+		private static readonly Dictionary<string, Texture2D> FLoadedTextures = new Dictionary<string, Texture2D>();
 
-		private static IEnumerator f_TextureLoaderCoroute;
+		private static IEnumerator _fTextureLoaderCoRoute;
 
-		private static bool ModDirScanned = false;
+		private static bool _modDirScanned;
 
-		internal static void EngageModPreloader()
+		internal static void EngageModPreLoader()
 		{
-			if (f_TextureLoaderCoroute == null)
+			if (_fTextureLoaderCoRoute != null)
 			{
-				f_TextureLoaderCoroute = TextureLoader();
-				Main.@this.StartCoroutine(f_TextureLoaderCoroute);
+				return;
 			}
+
+			_fTextureLoaderCoRoute = TextureLoader();
+			Main.SceneEditInstance.StartCoroutine(_fTextureLoaderCoRoute);
 		}
 
 		//Despite how it may appear, this is used, it's patched manually in Main.Awake
 		private static void MenuItemSet(ref SceneEdit.SMenuItem __1)
 		{
-			if (!f_RidsToStubs.ContainsKey(__1.m_nMenuFileRID))
+			if (!FRidsToStubs.ContainsKey(__1.m_nMenuFileRID))
+			{
+				return;
+			}
+			if (__1.m_texIcon != null && __1.m_texIcon != Texture2D.whiteTexture)
 			{
 				return;
 			}
 
-			if (__1.m_texIcon == null || __1.m_texIcon == Texture2D.whiteTexture)
+			try
 			{
-				try
-				{
-					__1.m_texIcon = GetTexture(__1.m_nMenuFileRID);
-					__1.m_texIconRandomColor = __1.m_texIcon;
-				}
-				catch
-				{
-					__1.m_texIcon = Texture2D.whiteTexture;
-					__1.m_texIconRandomColor = __1.m_texIcon;
-				}
+				__1.m_texIcon = GetTexture(__1.m_nMenuFileRID);
+				__1.m_texIconRandomColor = __1.m_texIcon;
+			}
+			catch
+			{
+				__1.m_texIcon = Texture2D.whiteTexture;
+				__1.m_texIconRandomColor = __1.m_texIcon;
 			}
 		}
 
@@ -70,14 +73,13 @@ namespace ShortMenuLoader
 		[HarmonyPrefix]
 		private static bool GetTextureByRid(ref Texture2D __result, int __2)
 		{
-			if (f_RidsToStubs.ContainsKey(__2))
+			if (!FRidsToStubs.ContainsKey(__2))
 			{
-				__result = GetTexture(__2);
-
-				return false;
+				return true;
 			}
 
-			return true;
+			__result = GetTexture(__2);
+			return false;
 		}
 
 		[HarmonyPatch(typeof(SceneEditWindow.CustomViewItem), "UpdateIcon")]
@@ -94,7 +96,7 @@ namespace ShortMenuLoader
 				}
 			}
 
-			SceneEdit.SMenuItem menuItem = __instance.GetMenuItem(__0, __instance.mpn);
+			var menuItem = __instance.GetMenuItem(__0, __instance.mpn);
 
 			if (menuItem == null || menuItem.m_boDelOnly && __instance.defaultIconTexture != null || menuItem.m_texIcon == null && __instance.defaultIconTexture != null)
 			{
@@ -102,7 +104,7 @@ namespace ShortMenuLoader
 			}
 			else if (menuItem.m_texIcon == null || menuItem.m_texIcon == Texture2D.whiteTexture)
 			{
-				if (f_RidsToStubs.ContainsKey(menuItem.m_nMenuFileRID))
+				if (FRidsToStubs.ContainsKey(menuItem.m_nMenuFileRID))
 				{
 					menuItem.m_texIcon = GetTexture(menuItem.m_nMenuFileRID);
 					menuItem.m_texIconRandomColor = menuItem.m_texIcon;
@@ -111,18 +113,16 @@ namespace ShortMenuLoader
 		}
 
 		//A helper function to everyone else.
-		private static Texture2D GetTexture(int menuFileID)
+		private static Texture2D GetTexture(int menuFileId)
 		{
-			string textureFileName;
-
-			if (!f_RidsToStubs.TryGetValue(menuFileID, out textureFileName))
+			if (!FRidsToStubs.TryGetValue(menuFileId, out var textureFileName))
 			{
 				return null;
 			}
 
 			if (Main.UseIconPreloader.Value == false)
 			{
-				if (ModDirScanned)
+				if (_modDirScanned)
 				{
 					var fetchedResource = LoadTextureFromModFolder(textureFileName);
 
@@ -136,73 +136,73 @@ namespace ShortMenuLoader
 			}
 
 			//If texture isn't loaded, load it.
-			if (!f_LoadedTextures.ContainsKey(textureFileName) || f_LoadedTextures[textureFileName] == null)
+			if (!FLoadedTextures.ContainsKey(textureFileName) || FLoadedTextures[textureFileName] == null)
 			{
-				if (f_ProcessedTextures.ContainsKey(textureFileName) && f_ProcessedTextures[textureFileName] != null)
+				if (FProcessedTextures.ContainsKey(textureFileName) && FProcessedTextures[textureFileName] != null)
 				{
-					f_LoadedTextures[textureFileName] = f_ProcessedTextures[textureFileName].CreateTexture2D();
+					FLoadedTextures[textureFileName] = FProcessedTextures[textureFileName].CreateTexture2D();
 				}
 				else
 				{
 #if DEBUG
-					Main.logger.LogWarning($"{textureFileName} wasn't loaded so it had to be loaded in manually...");
+					Main.PLogger.LogWarning($"{textureFileName} wasn't loaded so it had to be loaded in manually...");
 #endif
 
-					if (ModDirScanned)
+					if (_modDirScanned)
 					{
 						var fetchedResource = LoadTextureFromModFolder(textureFileName);
 
 						if (fetchedResource != null)
 						{
 #if DEBUG
-							Main.logger.LogWarning($"{textureFileName} Loaded from mod folder...");
+							Main.PLogger.LogWarning($"{textureFileName} Loaded from mod folder...");
 #endif
-							f_LoadedTextures[textureFileName] = fetchedResource.CreateTexture2D();
+							FLoadedTextures[textureFileName] = fetchedResource.CreateTexture2D();
 						}
 					}
 
-					if (!f_LoadedTextures.ContainsKey(textureFileName) || f_LoadedTextures[textureFileName] == null)
+					if (!FLoadedTextures.ContainsKey(textureFileName) || FLoadedTextures[textureFileName] == null)
 					{
 #if DEBUG
-						Main.logger.LogWarning($"{textureFileName} Isn't in the mod folder, loading from game system...");
+						Main.PLogger.LogWarning($"{textureFileName} Isn't in the mod folder, loading from game system...");
 #endif
 
-						f_LoadedTextures[textureFileName] = ImportCM.CreateTexture(textureFileName);
+						FLoadedTextures[textureFileName] = ImportCM.CreateTexture(textureFileName);
 					}
 				}
 			}
 
-			f_ProcessedTextures.TryRemove(textureFileName, out _);
-			return f_LoadedTextures[textureFileName];
+			FProcessedTextures.TryRemove(textureFileName, out _);
+			return FLoadedTextures[textureFileName];
 		}
 
 		private static IEnumerator TextureLoader()
 		{
 			var watch1 = Stopwatch.StartNew();
 
-			int MaxThreadsToSpawn = Math.Min(4, (int)(Environment.ProcessorCount * 0.25));
+			var maxThreadsToSpawn = Math.Min(4, (int)(Environment.ProcessorCount * 0.25));
 
-			Task loaderWorker = Task.Factory.StartNew(new Action(() =>
+			var loaderWorker = Task.Factory.StartNew(() =>
 			{
-				if (f_TexInModFolder == null)
+				if (_fTexInModFolder == null)
 				{
-					f_TexInModFolder = new Dictionary<string, string>();
+					_fTexInModFolder = new Dictionary<string, string>();
 
-					foreach (string s in Main.FilesInModFolder.Where(t => t.ToLower().EndsWith(".tex")))
+					foreach (var s in Main.FilesInModFolder.Where(t => t.ToLower().EndsWith(".tex")))
 					{
-						if (!f_TexInModFolder.ContainsKey(Path.GetFileName(s).ToLower()))
+						if (!_fTexInModFolder.ContainsKey(Path.GetFileName(s).ToLower()))
 						{
-							f_TexInModFolder[Path.GetFileName(s).ToLower()] = s;
+							_fTexInModFolder[Path.GetFileName(s).ToLower()] = s;
 						}
 					}
 
-					ModDirScanned = true;
+					_modDirScanned = true;
 #if DEBUG
-					Main.logger.LogInfo($"Done Scanning Mod Dir @ {watch1.Elapsed}");
+					Main.PLogger.LogInfo($"Done Scanning Mod Dir @ {watch1.Elapsed}");
 #endif
 				}
 
-				int filesLoadedCount = 0;
+				var filesLoadedCount = 0;
 
 				while (Main.ThreadsDone < 3)
 				{
@@ -212,11 +212,11 @@ namespace ShortMenuLoader
 
 				var watch2 = Stopwatch.StartNew();
 
-				var modQueue = new ConcurrentQueue<string>(f_RidsToStubs.Values.Where(val => !f_ProcessedTextures.ContainsKey(val) && !f_LoadedTextures.ContainsKey(val)));
+				var modQueue = new ConcurrentQueue<string>(FRidsToStubs.Values.Where(val => !FProcessedTextures.ContainsKey(val) && !FLoadedTextures.ContainsKey(val)));
 
-				Main.logger.LogInfo($"Starting preloader... GC at {GC.GetTotalMemory(false) / 1000000}");
+				Main.PLogger.LogInfo($"Starting pre-loader... GC at {GC.GetTotalMemory(false) / 1000000}");
 
-				Parallel.For(0, modQueue.Count, new ParallelOptions { MaxDegreeOfParallelism = MaxThreadsToSpawn }, (count, state) =>
+				Parallel.For(0, modQueue.Count, new ParallelOptions { MaxDegreeOfParallelism = maxThreadsToSpawn }, (count, state) =>
 				//while(modQueue.Count > 0)
 				{
 					if (modQueue.Count > 0 && modQueue.TryDequeue(out var key))
@@ -226,7 +226,7 @@ namespace ShortMenuLoader
 						if (loadedTex != null)
 						{
 							++filesLoadedCount;
-							f_ProcessedTextures[key] = loadedTex;
+							FProcessedTextures[key] = loadedTex;
 						}/*
 						else
 						{
@@ -246,8 +246,6 @@ namespace ShortMenuLoader
 							state.Break();
 							//break;
 						}
-
-						return;
 					}
 				});
 
@@ -255,31 +253,35 @@ namespace ShortMenuLoader
 				watch2.Stop();
 				watch1.Stop();
 
-				Main.logger.LogInfo($"Mod Icon Preloader Done @ {watch1.Elapsed}\n" +
-				$"\nWorked for {watch2.Elapsed}\n" +
-				$"In total loaded {filesLoadedCount} mod files." +
-				$"{GC.GetTotalMemory(false) * 0.000001} currently in GC. We preloaded {AmountOfDataPreloaded * 0.000001} Mbs");
-			}));
+				Main.PLogger.LogInfo($"Mod Icon Preloader Done @ {watch1.Elapsed}\n" +
+									 $"\nWorked for {watch2.Elapsed}\n" +
+									 $"In total loaded {filesLoadedCount} mod files." +
+									 $"{GC.GetTotalMemory(false) * 0.000001} currently in GC. We preloaded {_amountOfDataPreloaded * 0.000001} Mbs");
+			});
 
-			while (!loaderWorker.IsCompleted && !loaderWorker.IsFaulted)
+			if (!loaderWorker.IsCompleted)
 			{
-				yield return new WaitForSecondsRealtime(2);
+				yield return new TimedWaitUntil(() => loaderWorker.IsCompleted, 0.5f);
 			}
 
 			if (loaderWorker.IsFaulted)
 			{
-				Main.logger.LogError("The texture loader thread ran into an issue with the following exception:\n");
-				throw loaderWorker.Exception.InnerException;
+				Main.PLogger.LogError("The texture loader thread ran into an issue with the following exception:\n");
+
+				if (loaderWorker.Exception?.InnerException != null)
+				{
+					throw loaderWorker.Exception.InnerException;
+				}
 			}
 
 			//QuickEditVanilla.EngageVanillaPreloader();
 		}
 
-		public static PreloadTexture LoadTextureFromModFolder(string f_strFileName)
+		public static PreLoadTexture LoadTextureFromModFolder(string fStrFileName)
 		{
-			if (!f_TexInModFolder.TryGetValue(f_strFileName.ToLower(), out var fullPathToFile))
+			if (!_fTexInModFolder.TryGetValue(fStrFileName.ToLower(), out var fullPathToFile))
 			{
-				//Main.logger.LogWarning($"Couldn't find {f_strFileName} in mods folder...");
+				//Main.PLogger.LogWarning($"Couldn't find {f_strFileName} in mods folder...");
 				return null;
 			}
 
@@ -288,17 +290,17 @@ namespace ShortMenuLoader
 				using (var fileStream = File.OpenRead(fullPathToFile))
 				using (var binaryReader = new BinaryReader(fileStream))
 				{
-					string text = binaryReader.ReadString();
+					var text = binaryReader.ReadString();
 					if (text != "CM3D2_TEX")
 					{
 						return null;
 					}
-					int num = binaryReader.ReadInt32();
-					string text2 = binaryReader.ReadString();
+					var num = binaryReader.ReadInt32();
+					binaryReader.ReadString();
 
-					int width = 0;
-					int height = 0;
-					TextureFormat textureFormat = TextureFormat.ARGB32;
+					var width = 0;
+					var height = 0;
+					var textureFormat = TextureFormat.ARGB32;
 
 					Rect[] array = null;
 
@@ -306,16 +308,16 @@ namespace ShortMenuLoader
 					{
 						if (1011 <= num)
 						{
-							int num2 = binaryReader.ReadInt32();
+							var num2 = binaryReader.ReadInt32();
 							if (0 < num2)
 							{
 								array = new Rect[num2];
-								for (int i = 0; i < num2; i++)
+								for (var i = 0; i < num2; i++)
 								{
-									float num3 = binaryReader.ReadSingle();
-									float num4 = binaryReader.ReadSingle();
-									float num5 = binaryReader.ReadSingle();
-									float num6 = binaryReader.ReadSingle();
+									var num3 = binaryReader.ReadSingle();
+									var num4 = binaryReader.ReadSingle();
+									var num5 = binaryReader.ReadSingle();
+									var num6 = binaryReader.ReadSingle();
 									array[i] = new Rect(num3, num4, num5, num6);
 								}
 							}
@@ -325,47 +327,47 @@ namespace ShortMenuLoader
 						textureFormat = (TextureFormat)binaryReader.ReadInt32();
 					}
 
-					int num7 = binaryReader.ReadInt32();
+					var num7 = binaryReader.ReadInt32();
 
 					if (num7 > binaryReader.BaseStream.Length)
 					{
 						Array.Resize(ref array, 0);
-						Main.logger.LogWarning($"{f_strFileName} may be corrupted. The loader will use a white texture instead. Please correct the issue or expect large RAM usage spikes.");
-						return PreloadTexture.WhiteTexture;
+						Main.PLogger.LogWarning($"{fStrFileName} may be corrupted. The loader will use a white texture instead. Please correct the issue or expect large RAM usage spikes.");
+						return PreLoadTexture.WhiteTexture;
 					}
 
-					byte[] array2 = new byte[num7];
+					var array2 = new byte[num7];
 
-					if (TMonitor.TryEnter(AmountOfDataPreloaded, Main.TimeoutLimit.Value))
+					if (TMonitor.TryEnter(_amountOfDataPreloaded, Main.TimeoutLimit.Value))
 					{
 						try
 						{
-							AmountOfDataPreloaded += num7;
+							_amountOfDataPreloaded += num7;
 						}
 						finally
 						{
-							TMonitor.Exit(AmountOfDataPreloaded);
+							TMonitor.Exit(_amountOfDataPreloaded);
 						}
 					}
 
-					var ActuallyRead = binaryReader.Read(array2, 0, num7);
+					var actuallyRead = binaryReader.Read(array2, 0, num7);
 
 					if (num == 1000)
 					{
-						width = ((int)array2[16] << 24 | (int)array2[17] << 16 | (int)array2[18] << 8 | (int)array2[19]);
-						height = ((int)array2[20] << 24 | (int)array2[21] << 16 | (int)array2[22] << 8 | (int)array2[23]);
+						width = array2[16] << 24 | array2[17] << 16 | array2[18] << 8 | array2[19];
+						height = array2[20] << 24 | array2[21] << 16 | array2[22] << 8 | array2[23];
 					}
 
-					if (num7 > ActuallyRead)
+					if (num7 > actuallyRead)
 					{
 						Array.Resize(ref array, 0);
 						Array.Resize(ref array2, 0);
 
-						Main.logger.LogWarning($"{f_strFileName} made a larger array than it needed {num7 * 0.000001}MBs. It may be corrupted. Please correct the issue or you may see RAM usage spikes..");
-						return PreloadTexture.WhiteTexture;
+						Main.PLogger.LogWarning($"{fStrFileName} made a larger array than it needed {num7 * 0.000001}MBs. It may be corrupted. Please correct the issue or you may see RAM usage spikes..");
+						return PreLoadTexture.WhiteTexture;
 					}
 
-					return new PreloadTexture(width, height, textureFormat, ref array, ref array2, f_strFileName);
+					return new PreLoadTexture(width, height, textureFormat, ref array, ref array2, fStrFileName);
 				}
 			}
 			catch

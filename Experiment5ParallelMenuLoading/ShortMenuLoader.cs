@@ -7,11 +7,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Security;
 using System.Security.Permissions;
 using System.Text.RegularExpressions;
+using ShortMenuLoader.Loaders;
 using UnityEngine;
 
 [module: UnverifiableCode]
@@ -19,12 +21,12 @@ using UnityEngine;
 
 namespace ShortMenuLoader
 {
-	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.5.8")]
+	[BepInPlugin("ShortMenuLoader", "ShortMenuLoader", "1.5.9")]
 	[BepInDependency("ShortMenuVanillaDatabase", BepInDependency.DependencyFlags.SoftDependency)]
-	internal class Main : BaseUnityPlugin
+	internal class ShortMenuLoader : BaseUnityPlugin
 	{
 		private Harmony _harmony;
-		public static Main PlugInstance;
+		public static ShortMenuLoader PlugInstance;
 		public static SceneEdit SceneEditInstance;
 
 		public static float Time;
@@ -51,8 +53,25 @@ namespace ShortMenuLoader
 
 			PlugInstance = this;
 
+			var plugs = Directory.GetFiles(Paths.PluginPath, "*", SearchOption.AllDirectories)
+				.Select(t => Path.GetFileName(t).ToLower())
+				.ToArray();
+
+			var hasDependencies = plugs.Contains("system.threading.dll");
+
+			if (!hasDependencies)
+			{
+				PLogger.LogFatal("SMVD is missing some dependencies! Your game will now quit!");
+
+				var message =
+					"ShortMenuLoader is missing System.Threading.dll!"
+					+ "\nShortMenuLoader には System.Threading.dll がないよ！";
+
+				Assert(message, "Missing Reference!");
+			}
+
 			//We set our patcher so we can call it back and patch dynamically as needed.
-			_harmony = Harmony.CreateAndPatchAll(typeof(Main));
+			_harmony = Harmony.CreateAndPatchAll(typeof(ShortMenuLoader));
 
 			MethodBase menuItemSetConstructor = typeof(SceneEdit)
 			.GetNestedType("MenuItemSet", BindingFlags.NonPublic)
@@ -101,6 +120,11 @@ namespace ShortMenuLoader
 			UseIconPreloader = Config.Bind("General", "Whether to use the IconPreloader for mod files.", true, "In some users with weaker computers, this can cause massive slowdowns or ram over-usage. For these users, it might be more desirable to leave this off.");
 
 			PlugInstance.StartCoroutine(VanillaMenuLoad.LoadCache());
+		}
+		private static void Assert(string message, string title)
+		{
+			NUty.WinMessageBox(NUty.GetWindowHandle(), message, title, 0x00000010 | 0x00000000);
+			Application.Quit();
 		}
 
 		//Slightly out of scope but it serves to accomadate placing menu paths in descriptions. Silly kiss.

@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,10 +7,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using UnityEngine;
 using TMonitor = System.Threading.Monitor;
 
-namespace ShortMenuLoader
+namespace ShortMenuLoader.Loaders
 {
 	internal class GsModMenuLoad
 	{
@@ -52,15 +52,15 @@ namespace ShortMenuLoader
 			{
 				if (retry < 3)
 				{
-					Main.PLogger.LogError($"There was an error while attempting to load the mod cache: \n{cacheLoader.Exception.InnerException.Message}\n{cacheLoader.Exception.InnerException.StackTrace}\n\nAn attempt will be made to restart the load task...");
+					ShortMenuLoader.PLogger.LogError($"There was an error while attempting to load the mod cache: \n{cacheLoader.Exception?.InnerException?.Message}\n{cacheLoader.Exception?.InnerException?.StackTrace}\n\nAn attempt will be made to restart the load task...");
 
 					yield return new WaitForSecondsRealtime(5);
 
-					Main.PlugInstance.StartCoroutine(LoadCache(++retry));
+					ShortMenuLoader.PlugInstance.StartCoroutine(LoadCache(++retry));
 				}
 				else
 				{
-					Main.PLogger.LogError($"There was an error while attempting to load the mod cache: \n{cacheLoader.Exception.InnerException.Message}\n{cacheLoader.Exception.InnerException.StackTrace}\n\nThis is the 4th attempt to kickstart the task. Cache will be deleted and rebuilt next time.");
+					ShortMenuLoader.PLogger.LogError($"There was an error while attempting to load the mod cache: \n{cacheLoader.Exception?.InnerException?.Message}\n{cacheLoader.Exception?.InnerException?.StackTrace}\n\nThis is the 4th attempt to kickstart the task. Cache will be deleted and rebuilt next time.");
 
 					_menuCache = new Dictionary<string, MenuStub>();
 
@@ -81,7 +81,7 @@ namespace ShortMenuLoader
 
 				File.WriteAllText(CacheFile, JsonConvert.SerializeObject(_menuCache, Formatting.Indented));
 
-				Main.PLogger.LogDebug("Finished cleaning and saving the mod cache...");
+				ShortMenuLoader.PLogger.LogDebug("Finished cleaning and saving the mod cache...");
 			});
 
 			while (cacheSaver.IsCompleted == false)
@@ -93,18 +93,18 @@ namespace ShortMenuLoader
 			{
 				if (retry < 3)
 				{
-					Main.PLogger.LogError($"Cache saver task failed due to an unexpected error! SceneEditInstance is considered a minor failure: {cacheSaver.Exception.InnerException.Message}\n{cacheSaver.Exception.InnerException.StackTrace}\n\nAn attempt will be made to restart the task again...");
+					ShortMenuLoader.PLogger.LogError($"Cache saver task failed due to an unexpected error! SceneEditInstance is considered a minor failure: {cacheSaver.Exception?.InnerException?.Message}\n{cacheSaver.Exception?.InnerException?.StackTrace}\n\nAn attempt will be made to restart the task again...");
 
 					yield return new WaitForSecondsRealtime(5);
 
-					Main.PlugInstance.StartCoroutine(SaveCache(++retry));
+					ShortMenuLoader.PlugInstance.StartCoroutine(SaveCache(++retry));
 
 					yield break;
 				}
 
-				Main.PLogger.LogFatal($"Cache saver task failed due to an unexpected error! SceneEditInstance is considered a minor failure: {cacheSaver.Exception.InnerException.Message}\n{cacheSaver.Exception.InnerException.StackTrace}\n\nNo further attempts will be made to start the task again...");
+				ShortMenuLoader.PLogger.LogFatal($"Cache saver task failed due to an unexpected error! SceneEditInstance is considered a minor failure: {cacheSaver.Exception?.InnerException?.Message}\n{cacheSaver.Exception?.InnerException?.StackTrace}\n\nNo further attempts will be made to start the task again...");
 
-				throw cacheSaver.Exception.InnerException;
+				throw cacheSaver.Exception?.InnerException;
 			}
 		}
 
@@ -123,9 +123,9 @@ namespace ShortMenuLoader
 
 			var loaderWorker = Task.Factory.StartNew(() =>
 			{
-				Main.PLogger.LogDebug($"Fetching files @ {Main.WatchOverall.Elapsed}");
+				ShortMenuLoader.PLogger.LogDebug($"Fetching files @ {ShortMenuLoader.WatchOverall.Elapsed}");
 
-				foreach (var s in Main.FilesInModFolder.Where(t => t.ToLower().EndsWith(".menu")))
+				foreach (var s in ShortMenuLoader.FilesInModFolder.Where(t => t.ToLower().EndsWith(".menu")))
 				{
 					if (!FilesDictionary.ContainsKey(Path.GetFileName(s).ToLower()))
 					{
@@ -137,7 +137,7 @@ namespace ShortMenuLoader
 					}
 				}
 
-				Main.PLogger.LogDebug($"Done fetching files @ {Main.WatchOverall.Elapsed}");
+				ShortMenuLoader.PLogger.LogDebug($"Done fetching files @ {ShortMenuLoader.WatchOverall.Elapsed}");
 
 				DictionaryBuilt = true;
 
@@ -154,7 +154,7 @@ namespace ShortMenuLoader
 						{
 							if (_menuCache.ContainsKey(s.ToLower()))
 							{
-								if (TMonitor.TryEnter(FilesToRead, Main.TimeoutLimit.Value))
+								if (TMonitor.TryEnter(FilesToRead, ShortMenuLoader.TimeoutLimit.Value))
 								{
 									try
 									{
@@ -167,14 +167,14 @@ namespace ShortMenuLoader
 								}
 								else
 								{
-									Main.PLogger.LogError("Timed out waiting for mutex to allow entry...");
+									ShortMenuLoader.PLogger.LogError("Timed out waiting for mutex to allow entry...");
 									cts.Cancel();
 									token.ThrowIfCancellationRequested();
 								}
 							}
 							else
 							{
-								if (TMonitor.TryEnter(FilesToRead, Main.TimeoutLimit.Value))
+								if (TMonitor.TryEnter(FilesToRead, ShortMenuLoader.TimeoutLimit.Value))
 								{
 									try
 									{
@@ -187,7 +187,7 @@ namespace ShortMenuLoader
 								}
 								else
 								{
-									Main.PLogger.LogError("Timed out waiting for mutex to allow entry...");
+									ShortMenuLoader.PLogger.LogError("Timed out waiting for mutex to allow entry...");
 									cts.Cancel();
 									token.ThrowIfCancellationRequested();
 								}
@@ -197,7 +197,7 @@ namespace ShortMenuLoader
 						{
 							token.ThrowIfCancellationRequested();
 
-							if (TMonitor.TryEnter(FilesToRead, Main.TimeoutLimit.Value))
+							if (TMonitor.TryEnter(FilesToRead, ShortMenuLoader.TimeoutLimit.Value))
 							{
 								try
 								{
@@ -210,13 +210,13 @@ namespace ShortMenuLoader
 							}
 							else
 							{
-								Main.PLogger.LogError("Timed out waiting for mutex to allow entry...");
+								ShortMenuLoader.PLogger.LogError("Timed out waiting for mutex to allow entry...");
 								cts.Cancel();
 								token.ThrowIfCancellationRequested();
 							}
 						}
 					}
-					Main.PLogger.LogDebug($"Menu memory loader is finished @ {Main.WatchOverall.Elapsed}!");
+					ShortMenuLoader.PLogger.LogDebug($"Menu memory loader is finished @ {ShortMenuLoader.WatchOverall.Elapsed}!");
 				}, token);
 
 				while (servant.IsCanceled == false && (servant.IsCompleted == false || FilesToRead.Count > 0))
@@ -233,7 +233,7 @@ namespace ShortMenuLoader
 					{
 						strFileName = FilesToRead.FirstOrDefault().Key;
 					}
-					else if (TMonitor.TryEnter(FilesToRead, Main.TimeoutLimit.Value))
+					else if (TMonitor.TryEnter(FilesToRead, ShortMenuLoader.TimeoutLimit.Value))
 					{
 						try
 						{
@@ -246,7 +246,7 @@ namespace ShortMenuLoader
 					}
 					else
 					{
-						Main.PLogger.LogWarning("Timed out waiting for mutex to allow entry...");
+						ShortMenuLoader.PLogger.LogWarning("Timed out waiting for mutex to allow entry...");
 
 						_mutexTimeoutCounter += 1;
 
@@ -283,7 +283,7 @@ namespace ShortMenuLoader
 					{
 						FilesToRead.Remove(strFileName);
 					}
-					else if (TMonitor.TryEnter(FilesToRead, Main.TimeoutLimit.Value))
+					else if (TMonitor.TryEnter(FilesToRead, ShortMenuLoader.TimeoutLimit.Value))
 					{
 						try
 						{
@@ -296,7 +296,7 @@ namespace ShortMenuLoader
 					}
 					else
 					{
-						Main.PLogger.LogWarning("Timed out waiting for mutex to allow entry...");
+						ShortMenuLoader.PLogger.LogWarning("Timed out waiting for mutex to allow entry...");
 
 						_mutexTimeoutCounter += 1;
 
@@ -313,7 +313,7 @@ namespace ShortMenuLoader
 
 				if (servant.IsFaulted)
 				{
-					Main.PLogger.LogError("Servant task failed due to an unexpected error!");
+					ShortMenuLoader.PLogger.LogError("Servant task failed due to an unexpected error!");
 
 					if (servant.Exception != null)
 					{
@@ -323,13 +323,13 @@ namespace ShortMenuLoader
 
 				if (token.IsCancellationRequested)
 				{
-					Main.PLogger.LogError("A cancellation request was sent out! SceneEditInstance can be due to mutex failures...");
+					ShortMenuLoader.PLogger.LogError("A cancellation request was sent out! SceneEditInstance can be due to mutex failures...");
 
 					token.ThrowIfCancellationRequested();
 				}
 
-				Main.PLogger.LogDebug($"Mod Loader is finished in {Main.WatchOverall.Elapsed}!\n");
-			});
+				ShortMenuLoader.PLogger.LogDebug($"Mod Loader is finished in {ShortMenuLoader.WatchOverall.Elapsed}!\n");
+			}, token);
 
 			//We wait until the manager is not busy because starting work while the manager is busy causes egregious bugs.
 			if (!loaderWorker.IsCompleted || GameMain.Instance.CharacterMgr.IsBusy())
@@ -341,18 +341,18 @@ namespace ShortMenuLoader
 			{
 				if (loaderWorker.Exception?.InnerException != null)
 				{
-					Main.PLogger.LogError(
+					ShortMenuLoader.PLogger.LogError(
 						$"Worker task failed due to an unexpected error! SceneEditInstance is considered a full failure: {loaderWorker.Exception.InnerException.Message}\n{loaderWorker.Exception.InnerException.StackTrace}\n\nwe will try restarting the load task...");
 				}
 
 				yield return new WaitForSecondsRealtime(2);
 
-				Main.SceneEditInstance.StartCoroutine(GsMenuLoadStart(menuList, menuGroupMemberDic));
+				ShortMenuLoader.SceneEditInstance.StartCoroutine(GsMenuLoadStart(menuList, menuGroupMemberDic));
 
 				yield break;
 			}
 
-			Main.PLogger.LogDebug($"Worker finished @ {Main.WatchOverall.Elapsed}...");
+			ShortMenuLoader.PLogger.LogDebug($"Worker finished @ {ShortMenuLoader.WatchOverall.Elapsed}...");
 
 			var watch2 = Stopwatch.StartNew();
 
@@ -360,7 +360,7 @@ namespace ShortMenuLoader
 			{
 				try
 				{
-					if (Main.ChangeModPriority.Value)
+					if (ShortMenuLoader.ChangeModPriority.Value)
 					{
 						if (mi2.m_fPriority <= 0)
 						{
@@ -372,11 +372,11 @@ namespace ShortMenuLoader
 
 					if (!mi2.m_bMan)
 					{
-						//AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(Main.@this, new object[] { mi2 });
-						Main.SceneEditInstance.AddMenuItemToList(mi2);
+						//AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(ShortMenuLoader.@this, new object[] { mi2 });
+						ShortMenuLoader.SceneEditInstance.AddMenuItemToList(mi2);
 						menuList.Add(mi2);
-						Main.SceneEditInstance.m_menuRidDic[mi2.m_nMenuFileRID] = mi2;
-						//string parentMenuName2 = AccessTools.Method(typeof(SceneEdit), "GetParentMenuFileName").Invoke(Main.@this, new object[] { mi2 }) as string;
+						ShortMenuLoader.SceneEditInstance.m_menuRidDic[mi2.m_nMenuFileRID] = mi2;
+						//string parentMenuName2 = AccessTools.Method(typeof(SceneEdit), "GetParentMenuFileName").Invoke(ShortMenuLoader.@this, new object[] { mi2 }) as string;
 						var parentMenuName2 = SceneEdit.GetParentMenuFileName(mi2);
 						if (!string.IsNullOrEmpty(parentMenuName2))
 						{
@@ -399,31 +399,31 @@ namespace ShortMenuLoader
 				}
 				catch (Exception e)
 				{
-					Main.PLogger.LogError($"We caught the following exception while processing {mi2.m_strMenuFileName}:\n {e.StackTrace}");
+					ShortMenuLoader.PLogger.LogError($"We caught the following exception while processing {mi2.m_strMenuFileName}:\n {e.StackTrace}");
 				}
-				if (Main.BreakInterval.Value < Time.realtimeSinceStartup - Main.Time)
+				if (ShortMenuLoader.BreakInterval.Value < Time.realtimeSinceStartup - ShortMenuLoader.Time)
 				{
 					yield return null;
-					Main.Time = Time.realtimeSinceStartup;
+					ShortMenuLoader.Time = Time.realtimeSinceStartup;
 				}
 			}
 
-			Main.PLogger.LogDebug($"Time capped foreach done @ {Main.WatchOverall.Elapsed}...");
+			ShortMenuLoader.PLogger.LogDebug($"Time capped foreach done @ {ShortMenuLoader.WatchOverall.Elapsed}...");
 
-			Main.ThreadsDone++;
-			Main.PLogger.LogInfo($"Standard mods finished loading at: {Main.WatchOverall.Elapsed}\n");
+			ShortMenuLoader.ThreadsDone++;
+			ShortMenuLoader.PLogger.LogInfo($"Standard mods finished loading at: {ShortMenuLoader.WatchOverall.Elapsed}\n");
 			watch2.Reset();
 			watch2.Start();
 
-			Main.SceneEditInstance.StartCoroutine(SaveCache());
+			ShortMenuLoader.SceneEditInstance.StartCoroutine(SaveCache());
 
 			if (listOfDuplicates.Count > 0)
 			{
-				Main.PLogger.LogWarning($"There are {listOfDuplicates.Count} duplicate menus in your mod folder!");
+				ShortMenuLoader.PLogger.LogWarning($"There are {listOfDuplicates.Count} duplicate menus in your mod folder!");
 
 				foreach (var s in listOfDuplicates)
 				{
-					Main.PLogger.LogWarning("We found a duplicate that should be corrected immediately in your mod folder at: " + s);
+					ShortMenuLoader.PLogger.LogWarning("We found a duplicate that should be corrected immediately in your mod folder at: " + s);
 				}
 			}
 		}
@@ -449,12 +449,12 @@ namespace ShortMenuLoader
 			{
 				if (!InitMenuItemScript(mi, fStrMenuFileName, out iconTex))
 				{
-					Main.PLogger.LogError("(メニュースクリプトが読めませんでした。) The following menu file could not be read and will be skipped: " + fStrMenuFileName);
+					ShortMenuLoader.PLogger.LogError("(メニュースクリプトが読めませんでした。) The following menu file could not be read and will be skipped: " + fStrMenuFileName);
 				}
 			}
 			catch (Exception ex)
 			{
-				Main.PLogger.LogError(string.Concat("GetMenuItemSetUP tossed an exception while reading: ", fStrMenuFileName, "\n\n", ex.Message, "\n", ex.StackTrace));
+				ShortMenuLoader.PLogger.LogError(string.Concat("GetMenuItemSetUP tossed an exception while reading: ", fStrMenuFileName, "\n\n", ex.Message, "\n", ex.StackTrace));
 				return false;
 			}
 
@@ -508,7 +508,7 @@ namespace ShortMenuLoader
 
 						iconTex = tempStub.Icon;
 
-						if (Main.PutMenuFileNameInItemDescription.Value && !mi.m_strInfo.Contains($"\n\n{fStrMenuFileName}"))
+						if (ShortMenuLoader.PutMenuFileNameInItemDescription.Value && !mi.m_strInfo.Contains($"\n\n{fStrMenuFileName}"))
 						{
 							mi.m_strInfo += $"\n\n{fStrMenuFileName}";
 						}
@@ -516,11 +516,11 @@ namespace ShortMenuLoader
 						return true;
 					}
 
-					Main.PLogger.LogWarning("A cache entry was found outdated. SceneEditInstance should be automatically fixed and the cache reloaded.");
+					ShortMenuLoader.PLogger.LogWarning("A cache entry was found outdated. SceneEditInstance should be automatically fixed and the cache reloaded.");
 				}
 				catch (Exception ex)
 				{
-					Main.PLogger.LogError(string.Concat($"Encountered an issue while trying to load menu {fStrMenuFileName} from cache. SceneEditInstance should be automatically fixed and the cache reloaded.", "\n\n", ex.Message, "\n", ex.StackTrace));
+					ShortMenuLoader.PLogger.LogError(string.Concat($"Encountered an issue while trying to load menu {fStrMenuFileName} from cache. SceneEditInstance should be automatically fixed and the cache reloaded.", "\n\n", ex.Message, "\n", ex.StackTrace));
 				}
 			}
 
@@ -533,7 +533,7 @@ namespace ShortMenuLoader
 			}
 			catch (Exception ex)
 			{
-				Main.PLogger.LogError(string.Concat("The following menu file could not be read! (メニューファイルがが読み込めませんでした。): ", fStrMenuFileName, "\n\n", ex.Message, "\n", ex.StackTrace));
+				ShortMenuLoader.PLogger.LogError(string.Concat("The following menu file could not be read! (メニューファイルがが読み込めませんでした。): ", fStrMenuFileName, "\n\n", ex.Message, "\n", ex.StackTrace));
 
 				return false;
 			}
@@ -552,7 +552,7 @@ namespace ShortMenuLoader
 
 					if (text != "CM3D2_MENU")
 					{
-						Main.PLogger.LogError("ProcScriptBin (例外 : ヘッダーファイルが不正です。) The header indicates a file type that is not a menu file!" + text + " @ " + fStrMenuFileName);
+						ShortMenuLoader.PLogger.LogError("ProcScriptBin (例外 : ヘッダーファイルが不正です。) The header indicates a file type that is not a menu file!" + text + " @ " + fStrMenuFileName);
 
 						return false;
 					}
@@ -585,170 +585,179 @@ namespace ShortMenuLoader
 							switch (stringCom)
 							{
 								case "name" when stringList.Length > 1:
-								{
-									var text8 = stringList[1];
-									var text9 = string.Empty;
-									var j = 0;
-									while (j < text8.Length && text8[j] != '\u3000' && text8[j] != ' ')
 									{
-										text9 += text8[j];
-										j++;
+										var text8 = stringList[1];
+										var text9 = string.Empty;
+										var j = 0;
+										while (j < text8.Length && text8[j] != '\u3000' && text8[j] != ' ')
+										{
+											text9 += text8[j];
+											j++;
+										}
+										while (j < text8.Length)
+										{
+											j++;
+										}
+										mi.m_strMenuName = text9;
+										cacheEntry.Name = mi.m_strMenuName;
+										break;
 									}
-									while (j < text8.Length)
-									{
-										j++;
-									}
-									mi.m_strMenuName = text9;
-									cacheEntry.Name = mi.m_strMenuName;
-									break;
-								}
 								case "name":
-									Main.PLogger.LogWarning("Menu file has no name and an empty description will be used instead." + " @ " + fStrMenuFileName);
+									ShortMenuLoader.PLogger.LogWarning("Menu file has no name and an empty description will be used instead." + " @ " + fStrMenuFileName);
 
 									mi.m_strMenuName = "";
 									cacheEntry.Name = mi.m_strMenuName;
 									break;
+
 								case "setumei" when stringList.Length > 1:
 									mi.m_strInfo = stringList[1];
 									mi.m_strInfo = mi.m_strInfo.Replace("《改行》", "\n");
 									cacheEntry.Description = mi.m_strInfo;
 									break;
+
 								case "setumei":
-									Main.PLogger.LogWarning("Menu file has no description (setumei) and an empty description will be used instead." + " @ " + fStrMenuFileName);
+									ShortMenuLoader.PLogger.LogWarning("Menu file has no description (setumei) and an empty description will be used instead." + " @ " + fStrMenuFileName);
 
 									mi.m_strInfo = "";
 									cacheEntry.Description = mi.m_strInfo;
 									break;
+
 								case "category" when stringList.Length > 1:
-								{
-									var strCateName = stringList[1].ToLower();
-									mi.m_strCateName = strCateName;
-									cacheEntry.Category = (MPN)Enum.Parse(typeof(MPN), mi.m_strCateName);
-									try
 									{
-										mi.m_mpn = (MPN)Enum.Parse(typeof(MPN), mi.m_strCateName);
-										cacheEntry.Category = mi.m_mpn;
-									}
-									catch
-									{
-										Main.PLogger.LogWarning("There is no category called (カテゴリがありません。): " + mi.m_strCateName + " @ " + fStrMenuFileName);
-										return false;
-									}
-
-									break;
-								}
-								case "category":
-									Main.PLogger.LogWarning("The following menu file has a category parent with no category: " + fStrMenuFileName);
-									return false;
-								case "color_set" when stringList.Length > 1:
-								{
-									try
-									{
-										mi.m_eColorSetMPN = (MPN)Enum.Parse(typeof(MPN), stringList[1].ToLower());
-										cacheEntry.ColorSetMpn = mi.m_eColorSetMPN;
-									}
-									catch
-									{
-										Main.PLogger.LogWarning("There is no category called(カテゴリがありません。): " + mi.m_strCateName + " @ " + fStrMenuFileName);
-
-										return false;
-									}
-									if (stringList.Length >= 3)
-									{
-										mi.m_strMenuNameInColorSet = stringList[2].ToLower();
-										cacheEntry.ColorSetMenu = mi.m_strMenuNameInColorSet;
-									}
-
-									break;
-								}
-								case "color_set":
-									Main.PLogger.LogWarning("A color_set entry exists but is otherwise empty" + " @ " + fStrMenuFileName);
-									break;
-								case "tex":
-								case "テクスチャ変更":
-								{
-									if (stringList.Length == 6)
-									{
-										var text10 = stringList[5];
-										MaidParts.PARTS_COLOR pcMultiColorId;
+										var strCateName = stringList[1].ToLower();
+										mi.m_strCateName = strCateName;
+										cacheEntry.Category = (MPN)Enum.Parse(typeof(MPN), mi.m_strCateName);
 										try
 										{
-											pcMultiColorId = (MaidParts.PARTS_COLOR)Enum.Parse(typeof(MaidParts.PARTS_COLOR), text10.ToUpper());
+											mi.m_mpn = (MPN)Enum.Parse(typeof(MPN), mi.m_strCateName);
+											cacheEntry.Category = mi.m_mpn;
 										}
 										catch
 										{
-											Main.PLogger.LogError("無限色IDがありません。(The following free color ID does not exist: )" + text10 + " @ " + fStrMenuFileName);
+											ShortMenuLoader.PLogger.LogWarning("There is no category called (カテゴリがありません。): " + mi.m_strCateName + " @ " + fStrMenuFileName);
+											return false;
+										}
+
+										break;
+									}
+								case "category":
+									ShortMenuLoader.PLogger.LogWarning("The following menu file has a category parent with no category: " + fStrMenuFileName);
+									return false;
+
+								case "color_set" when stringList.Length > 1:
+									{
+										try
+										{
+											mi.m_eColorSetMPN = (MPN)Enum.Parse(typeof(MPN), stringList[1].ToLower());
+											cacheEntry.ColorSetMpn = mi.m_eColorSetMPN;
+										}
+										catch
+										{
+											ShortMenuLoader.PLogger.LogWarning("There is no category called(カテゴリがありません。): " + mi.m_strCateName + " @ " + fStrMenuFileName);
 
 											return false;
 										}
-										mi.m_pcMultiColorID = pcMultiColorId;
-										cacheEntry.MultiColorId = mi.m_pcMultiColorID;
-									}
+										if (stringList.Length >= 3)
+										{
+											mi.m_strMenuNameInColorSet = stringList[2].ToLower();
+											cacheEntry.ColorSetMenu = mi.m_strMenuNameInColorSet;
+										}
 
+										break;
+									}
+								case "color_set":
+									ShortMenuLoader.PLogger.LogWarning("A color_set entry exists but is otherwise empty" + " @ " + fStrMenuFileName);
 									break;
-								}
+
+								case "tex":
+								case "テクスチャ変更":
+									{
+										if (stringList.Length == 6)
+										{
+											var text10 = stringList[5];
+											MaidParts.PARTS_COLOR pcMultiColorId;
+											try
+											{
+												pcMultiColorId = (MaidParts.PARTS_COLOR)Enum.Parse(typeof(MaidParts.PARTS_COLOR), text10.ToUpper());
+											}
+											catch
+											{
+												ShortMenuLoader.PLogger.LogError("無限色IDがありません。(The following free color ID does not exist: )" + text10 + " @ " + fStrMenuFileName);
+
+												return false;
+											}
+											mi.m_pcMultiColorID = pcMultiColorId;
+											cacheEntry.MultiColorId = mi.m_pcMultiColorID;
+										}
+
+										break;
+									}
 								case "icon":
 								case "icons":
-								{
-									if (stringList.Length > 1)
 									{
-										text5 = stringList[1];
-									}
-									else
-									{
-										Main.PLogger.LogError("The following menu file has an icon entry but no field set: " + fStrMenuFileName);
+										if (stringList.Length > 1)
+										{
+											text5 = stringList[1];
+										}
+										else
+										{
+											ShortMenuLoader.PLogger.LogError("The following menu file has an icon entry but no field set: " + fStrMenuFileName);
 
-										return false;
-									}
+											return false;
+										}
 
-									break;
-								}
+										break;
+									}
 								case "saveitem" when stringList.Length > 1:
-								{
-									var text11 = stringList[1];
-									if (string.IsNullOrEmpty(text11))
 									{
-										Main.PLogger.LogWarning("SaveItem is either null or empty." + " @ " + fStrMenuFileName);
-									}
+										var text11 = stringList[1];
+										if (string.IsNullOrEmpty(text11))
+										{
+											ShortMenuLoader.PLogger.LogWarning("SaveItem is either null or empty." + " @ " + fStrMenuFileName);
+										}
 
-									break;
-								}
+										break;
+									}
 								case "saveitem":
-									Main.PLogger.LogWarning("A saveitem entry exists with nothing set in the field @ " + fStrMenuFileName);
+									ShortMenuLoader.PLogger.LogWarning("A saveitem entry exists with nothing set in the field @ " + fStrMenuFileName);
 									break;
+
 								case "unsetitem":
 									mi.m_boDelOnly = true;
 									cacheEntry.DelMenu = mi.m_boDelOnly;
 									break;
+
 								case "priority" when stringList.Length > 1:
 									mi.m_fPriority = float.Parse(stringList[1]);
 									cacheEntry.Priority = mi.m_fPriority;
 									break;
+
 								case "priority":
-									Main.PLogger.LogError("The following menu file has a priority entry but no field set. A default value of 10000 will be used: " + fStrMenuFileName);
+									ShortMenuLoader.PLogger.LogError("The following menu file has a priority entry but no field set. A default value of 10000 will be used: " + fStrMenuFileName);
 
 									mi.m_fPriority = 10000f;
 									cacheEntry.Priority = mi.m_fPriority;
 									break;
-								case "メニューフォルダ" when stringList.Length > 1:
-								{
-									if (stringList[1].ToLower() == "man")
-									{
-										mi.m_bMan = true;
-										cacheEntry.ManMenu = mi.m_bMan;
-									}
 
-									break;
-								}
+								case "メニューフォルダ" when stringList.Length > 1:
+									{
+										if (stringList[1].ToLower() == "man")
+										{
+											mi.m_bMan = true;
+											cacheEntry.ManMenu = mi.m_bMan;
+										}
+
+										break;
+									}
 								case "メニューフォルダ":
-									Main.PLogger.LogError("A a menu with a menu folder setting (メニューフォルダ) has an entry but no field set: " + fStrMenuFileName);
+									ShortMenuLoader.PLogger.LogError("A a menu with a menu folder setting (メニューフォルダ) has an entry but no field set: " + fStrMenuFileName);
 
 									return false;
 							}
 						}
 					}
 
-					if (Main.PutMenuFileNameInItemDescription.Value && !mi.m_strInfo.Contains($"\n\n{fStrMenuFileName}"))
+					if (ShortMenuLoader.PutMenuFileNameInItemDescription.Value && !mi.m_strInfo.Contains($"\n\n{fStrMenuFileName}"))
 					{
 						mi.m_strInfo += $"\n\n{fStrMenuFileName}";
 					}
@@ -763,7 +772,7 @@ namespace ShortMenuLoader
 						}
 						catch (Exception)
 						{
-							Main.PLogger.LogError("Error setting some icon tex from a normal mod." + " @ " + fStrMenuFileName);
+							ShortMenuLoader.PLogger.LogError("Error setting some icon tex from a normal mod." + " @ " + fStrMenuFileName);
 
 							return false;
 						}
@@ -772,7 +781,7 @@ namespace ShortMenuLoader
 			}
 			catch (Exception ex2)
 			{
-				Main.PLogger.LogError(string.Concat("Exception when reading: ", fStrMenuFileName, "\nThe line currently being processed, likely the issue (現在処理中だった行): ", text6, "\nPrevious line (以前の行): ", text7, "\n\n", ex2.Message, "\n", ex2.StackTrace));
+				ShortMenuLoader.PLogger.LogError(string.Concat("Exception when reading: ", fStrMenuFileName, "\nThe line currently being processed, likely the issue (現在処理中だった行): ", text6, "\nPrevious line (以前の行): ", text7, "\n\n", ex2.Message, "\n", ex2.StackTrace));
 
 				return false;
 			}

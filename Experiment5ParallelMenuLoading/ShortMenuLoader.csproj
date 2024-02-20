@@ -45,7 +45,7 @@
     <None Include="0OldClasses\Main - TPLimplementation2.cs" />
     <None Include="0OldClasses\Main - TPLimplementation.cs" />
     <None Include="0OldClasses\Main.cs" />
-    <Compile Include="Main.cs" />
+    <Compile Include="ShortMenuLoader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

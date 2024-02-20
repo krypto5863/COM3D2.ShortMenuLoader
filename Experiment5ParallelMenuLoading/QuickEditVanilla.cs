@@ -1,5 +1,5 @@
-﻿using HarmonyLib;
-using System.Collections.Concurrent;
+﻿using BepInEx;
+using HarmonyLib;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,9 +8,9 @@ namespace ShortMenuLoader
 	internal class QuickEditVanilla
 	{
 		internal static Dictionary<int, string> FRidsToStubs = new Dictionary<int, string>();
-		private static readonly ConcurrentDictionary<string, TextureResource> FProcessedTextures = new ConcurrentDictionary<string, TextureResource>();
+		//private static readonly Dictionary<string, TextureResource> FProcessedTextures = new Dictionary<string, TextureResource>();
 
-		private static readonly Dictionary<string, Texture2D> FLoadedTextures = new Dictionary<string, Texture2D>();
+		//private static readonly Dictionary<string, Texture2D> FLoadedTextures = new Dictionary<string, Texture2D>();
 
 		/*
 		internal static void EngageVanillaPreloader()
@@ -18,7 +18,7 @@ namespace ShortMenuLoader
 			if (f_TextureLoaderCoroute == null)
 			{
 				f_TextureLoaderCoroute = TextureLoader();
-				Main.@this.StartCoroutine(f_TextureLoaderCoroute);
+				ShortMenuLoader.@this.StartCoroutine(f_TextureLoaderCoroute);
 			}
 		}*/
 
@@ -27,12 +27,12 @@ namespace ShortMenuLoader
 		[HarmonyPrefix]
 		private static bool GetTextureByRid(ref Texture2D __result, int __0)
 		{
-			if (!FRidsToStubs.ContainsKey(__0))
+			if (!FRidsToStubs.TryGetValue(__0, out var fileName))
 			{
 				return true;
 			}
 
-			__result = GetTexture(__0);
+			__result = GetTexture(fileName);
 			return false;
 		}
 
@@ -57,7 +57,7 @@ namespace ShortMenuLoader
 			{
 				int filesLoadedCount = 0;
 
-				while (Main.ThreadsDone < 3)
+				while (ShortMenuLoader.ThreadsDone < 3)
 				{
 					Thread.Sleep(3000);
 				}
@@ -66,7 +66,7 @@ namespace ShortMenuLoader
 
 				var queue = new ConcurrentQueue<string>(f_RidsToStubs.Values.Where(val => !f_ProcessedTextures.ContainsKey(val) && !f_LoadedTextures.ContainsKey(val)));
 
-				//Main.LockDownForThreading = true;
+				//ShortMenuLoader.LockDownForThreading = true;
 
 				Parallel.For(0, queue.Count, new ParallelOptions { MaxDegreeOfParallelism = MaxThreadsToSpawn }, (count, state) =>
 				{
@@ -82,7 +82,7 @@ namespace ShortMenuLoader
 					}
 					else
 					{
-						if (Main.ThreadsDone >= 3 && queue.Count <= 0)
+						if (ShortMenuLoader.ThreadsDone >= 3 && queue.Count <= 0)
 						{
 							state.Break();
 						}
@@ -94,12 +94,12 @@ namespace ShortMenuLoader
 					}
 				});
 
-				//Main.LockDownForThreading = false;
+				//ShortMenuLoader.LockDownForThreading = false;
 
 				watch2.Stop();
 				watch1.Stop();
 
-				Main.PLogger.LogInfo($"Vanilla Icon Preloader Done @ {watch1.Elapsed}\n" +
+				ShortMenuLoader.PLogger.LogInfo($"Vanilla Icon Preloader Done @ {watch1.Elapsed}\n" +
 				$"\nWorked for {watch2.Elapsed}\n" +
 				$"In total loaded {filesLoadedCount} vanilla files...\n");
 			}));
@@ -111,20 +111,23 @@ namespace ShortMenuLoader
 
 			if (loaderWorker.IsFaulted)
 			{
-				Main.PLogger.LogError("The texture loader thread ran into an issue with the following exception:\n");
+				ShortMenuLoader.PLogger.LogError("The texture loader thread ran into an issue with the following exception:\n");
 				throw loaderWorker.Exception.InnerException;
 			}
 		}*/
 
 		//A helper function to everyone else.
-		private static Texture2D GetTexture(int menuFileId)
+		private static Texture2D GetTexture(string fileName)
 		{
+			return fileName.IsNullOrWhiteSpace() ? null : ImportCM.CreateTexture(fileName);
+
+			/*
 			if (FRidsToStubs.TryGetValue(menuFileId, out var textureFileName) == false)
 			{
 				return null;
 			}
 
-			if (Main.UseIconPreloader.Value == false)
+			if (ShortMenuLoader.UseIconPreloader.Value == false)
 			{
 				var fetchedResource = ImportCM.CreateTexture(textureFileName);
 
@@ -141,7 +144,7 @@ namespace ShortMenuLoader
 				else
 				{
 #if DEBUG
-					Main.PLogger.LogWarning($"{textureFileName} wasn't loaded so it had to be loaded in manually...");
+					ShortMenuLoader.PLogger.LogWarning($"{textureFileName} wasn't loaded so it had to be loaded in manually...");
 #endif
 
 					if (!FLoadedTextures.ContainsKey(textureFileName) || FLoadedTextures[textureFileName] == null)
@@ -151,8 +154,9 @@ namespace ShortMenuLoader
 				}
 			}
 
-			FProcessedTextures.TryRemove(textureFileName, out _);
+			FProcessedTextures.Remove(textureFileName);
 			return FLoadedTextures[textureFileName];
+			*/
 		}
 	}
 }

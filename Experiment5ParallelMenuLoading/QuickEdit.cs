@@ -40,10 +40,10 @@ namespace ShortMenuLoader
 			}
 
 			_fTextureLoaderCoRoute = TextureLoader();
-			Main.SceneEditInstance.StartCoroutine(_fTextureLoaderCoRoute);
+			ShortMenuLoader.SceneEditInstance.StartCoroutine(_fTextureLoaderCoRoute);
 		}
 
-		//Despite how it may appear, this is used, it's patched manually in Main.Awake
+		//Despite how it may appear, this is used, it's patched manually in ShortMenuLoader.Awake
 		private static void MenuItemSet(ref SceneEdit.SMenuItem __1)
 		{
 			if (!FRidsToStubs.ContainsKey(__1.m_nMenuFileRID))
@@ -120,7 +120,7 @@ namespace ShortMenuLoader
 				return null;
 			}
 
-			if (Main.UseIconPreloader.Value == false)
+			if (ShortMenuLoader.UseIconPreloader.Value == false)
 			{
 				if (_modDirScanned)
 				{
@@ -145,7 +145,7 @@ namespace ShortMenuLoader
 				else
 				{
 #if DEBUG
-					Main.PLogger.LogWarning($"{textureFileName} wasn't loaded so it had to be loaded in manually...");
+					ShortMenuLoader.PLogger.LogWarning($"{textureFileName} wasn't loaded so it had to be loaded in manually...");
 #endif
 
 					if (_modDirScanned)
@@ -155,7 +155,7 @@ namespace ShortMenuLoader
 						if (fetchedResource != null)
 						{
 #if DEBUG
-							Main.PLogger.LogWarning($"{textureFileName} Loaded from mod folder...");
+							ShortMenuLoader.PLogger.LogWarning($"{textureFileName} Loaded from mod folder...");
 #endif
 							FLoadedTextures[textureFileName] = fetchedResource.CreateTexture2D();
 						}
@@ -164,7 +164,7 @@ namespace ShortMenuLoader
 					if (!FLoadedTextures.ContainsKey(textureFileName) || FLoadedTextures[textureFileName] == null)
 					{
 #if DEBUG
-						Main.PLogger.LogWarning($"{textureFileName} Isn't in the mod folder, loading from game system...");
+						ShortMenuLoader.PLogger.LogWarning($"{textureFileName} Isn't in the mod folder, loading from game system...");
 #endif
 
 						FLoadedTextures[textureFileName] = ImportCM.CreateTexture(textureFileName);
@@ -188,7 +188,7 @@ namespace ShortMenuLoader
 				{
 					_fTexInModFolder = new Dictionary<string, string>();
 
-					foreach (var s in Main.FilesInModFolder.Where(t => t.ToLower().EndsWith(".tex")))
+					foreach (var s in ShortMenuLoader.FilesInModFolder.Where(t => t.ToLower().EndsWith(".tex")))
 					{
 						if (!_fTexInModFolder.ContainsKey(Path.GetFileName(s).ToLower()))
 						{
@@ -198,13 +198,13 @@ namespace ShortMenuLoader
 
 					_modDirScanned = true;
 #if DEBUG
-					Main.PLogger.LogInfo($"Done Scanning Mod Dir @ {watch1.Elapsed}");
+					ShortMenuLoader.PLogger.LogInfo($"Done Scanning Mod Dir @ {watch1.Elapsed}");
 #endif
 				}
 
 				var filesLoadedCount = 0;
 
-				while (Main.ThreadsDone < 3)
+				while (ShortMenuLoader.ThreadsDone < 3)
 				{
 					Thread.Sleep(1000);
 					//yield return null;
@@ -214,7 +214,7 @@ namespace ShortMenuLoader
 
 				var modQueue = new ConcurrentQueue<string>(FRidsToStubs.Values.Where(val => !FProcessedTextures.ContainsKey(val) && !FLoadedTextures.ContainsKey(val)));
 
-				Main.PLogger.LogInfo($"Starting pre-loader... GC at {GC.GetTotalMemory(false) / 1000000}");
+				ShortMenuLoader.PLogger.LogInfo($"Starting pre-loader... GC at {GC.GetTotalMemory(false) / 1000000}");
 
 				Parallel.For(0, modQueue.Count, new ParallelOptions { MaxDegreeOfParallelism = maxThreadsToSpawn }, (count, state) =>
 				//while(modQueue.Count > 0)
@@ -241,7 +241,7 @@ namespace ShortMenuLoader
 					}
 					else
 					{
-						if (Main.ThreadsDone >= 3 && modQueue.Count <= 0)
+						if (ShortMenuLoader.ThreadsDone >= 3 && modQueue.Count <= 0)
 						{
 							state.Break();
 							//break;
@@ -249,11 +249,11 @@ namespace ShortMenuLoader
 					}
 				});
 
-				//Main.LockDownForThreading = false;
+				//ShortMenuLoader.LockDownForThreading = false;
 				watch2.Stop();
 				watch1.Stop();
 
-				Main.PLogger.LogInfo($"Mod Icon Preloader Done @ {watch1.Elapsed}\n" +
+				ShortMenuLoader.PLogger.LogInfo($"Mod Icon Preloader Done @ {watch1.Elapsed}\n" +
 									 $"\nWorked for {watch2.Elapsed}\n" +
 									 $"In total loaded {filesLoadedCount} mod files." +
 									 $"{GC.GetTotalMemory(false) * 0.000001} currently in GC. We preloaded {_amountOfDataPreloaded * 0.000001} Mbs");
@@ -266,7 +266,7 @@ namespace ShortMenuLoader
 
 			if (loaderWorker.IsFaulted)
 			{
-				Main.PLogger.LogError("The texture loader thread ran into an issue with the following exception:\n");
+				ShortMenuLoader.PLogger.LogError("The texture loader thread ran into an issue with the following exception:\n");
 
 				if (loaderWorker.Exception?.InnerException != null)
 				{
@@ -281,7 +281,7 @@ namespace ShortMenuLoader
 		{
 			if (!_fTexInModFolder.TryGetValue(fStrFileName.ToLower(), out var fullPathToFile))
 			{
-				//Main.PLogger.LogWarning($"Couldn't find {f_strFileName} in mods folder...");
+				//ShortMenuLoader.PLogger.LogWarning($"Couldn't find {f_strFileName} in mods folder...");
 				return null;
 			}
 
@@ -332,13 +332,13 @@ namespace ShortMenuLoader
 					if (num7 > binaryReader.BaseStream.Length)
 					{
 						Array.Resize(ref array, 0);
-						Main.PLogger.LogWarning($"{fStrFileName} may be corrupted. The loader will use a white texture instead. Please correct the issue or expect large RAM usage spikes.");
+						ShortMenuLoader.PLogger.LogWarning($"{fStrFileName} may be corrupted. The loader will use a white texture instead. Please correct the issue or expect large RAM usage spikes.");
 						return PreLoadTexture.WhiteTexture;
 					}
 
 					var array2 = new byte[num7];
 
-					if (TMonitor.TryEnter(_amountOfDataPreloaded, Main.TimeoutLimit.Value))
+					if (TMonitor.TryEnter(_amountOfDataPreloaded, ShortMenuLoader.TimeoutLimit.Value))
 					{
 						try
 						{
@@ -363,7 +363,7 @@ namespace ShortMenuLoader
 						Array.Resize(ref array, 0);
 						Array.Resize(ref array2, 0);
 
-						Main.PLogger.LogWarning($"{fStrFileName} made a larger array than it needed {num7 * 0.000001}MBs. It may be corrupted. Please correct the issue or you may see RAM usage spikes..");
+						ShortMenuLoader.PLogger.LogWarning($"{fStrFileName} made a larger array than it needed {num7 * 0.000001}MBs. It may be corrupted. Please correct the issue or you may see RAM usage spikes..");
 						return PreLoadTexture.WhiteTexture;
 					}
 

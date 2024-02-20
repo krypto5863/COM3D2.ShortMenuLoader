@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace ShortMenuLoader
+namespace ShortMenuLoader.Loaders
 {
 	internal class ModMenuLoad
 	{
@@ -28,7 +28,7 @@ namespace ShortMenuLoader
 					{
 						try
 						{
-							if (TMonitor.TryEnter(modFiles, Main.TimeoutLimit.Value))
+							if (TMonitor.TryEnter(modFiles, ShortMenuLoader.TimeoutLimit.Value))
 							{
 								try
 								{
@@ -42,20 +42,20 @@ namespace ShortMenuLoader
 							}
 							else
 							{
-								Main.PLogger.LogError($"Timed out waiting for mutex to allow entry...");
+								ShortMenuLoader.PLogger.LogError($"Timed out waiting for mutex to allow entry...");
 							}
 						}
 						catch
 						{
-							Main.PLogger.LogError("Couldn't read .mod file at: " + mod);
+							ShortMenuLoader.PLogger.LogError("Couldn't read .mod file at: " + mod);
 						}
 					}
 
-					Main.PLogger.LogInfo($"After loading all .mod files, we have allocated: {GC.GetTotalMemory(false) * 0.000001}");
+					ShortMenuLoader.PLogger.LogInfo($"After loading all .mod files, we have allocated: {GC.GetTotalMemory(false) * 0.000001}");
 				}));
 				*/
 
-				foreach (var mod in Main.FilesInModFolder.Where(t => t.ToLower().EndsWith(".mod")))
+				foreach (var mod in ShortMenuLoader.FilesInModFolder.Where(t => t.ToLower().EndsWith(".mod")))
 				{
 					var mi2 = new SceneEdit.SMenuItem();
 					if (InitModMenuItemScript(mi2, mod, out var icon))
@@ -69,7 +69,7 @@ namespace ShortMenuLoader
 				/*
 				if (servantWorker.IsFaulted)
 				{
-					Main.PLogger.LogError($"Servant task failed due to an unexpected error!");
+					ShortMenuLoader.PLogger.LogError($"Servant task failed due to an unexpected error!");
 
 					throw servantWorker.Exception;
 				}
@@ -85,11 +85,11 @@ namespace ShortMenuLoader
 
 			if (loaderWorker.IsFaulted)
 			{
-				Main.PLogger.LogWarning($"Worker task failed due to an unexpected error! SceneEditInstance is considered a full failure: {loaderWorker.Exception.InnerException.Message}\n{loaderWorker.Exception.InnerException.StackTrace}\n\nwe will try restarting the load task...");
+				ShortMenuLoader.PLogger.LogWarning($"Worker task failed due to an unexpected error! SceneEditInstance is considered a full failure: {loaderWorker.Exception?.InnerException?.Message}\n{loaderWorker.Exception.InnerException.StackTrace}\n\nwe will try restarting the load task...");
 
 				yield return new WaitForSecondsRealtime(2);
 
-				Main.SceneEditInstance.StartCoroutine(ModMenuLoadStart(menuList, menuGroupMemberDic));
+				ShortMenuLoader.SceneEditInstance.StartCoroutine(ModMenuLoadStart(menuList, menuGroupMemberDic));
 
 				yield break;
 			}
@@ -108,19 +108,19 @@ namespace ShortMenuLoader
 
 			foreach (var mi2 in modIconLoads.Keys)
 			{
-				//AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(Main.@this, new object[] { mi2 });
-				Main.SceneEditInstance.AddMenuItemToList(mi2);
+				//AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(ShortMenuLoader.@this, new object[] { mi2 });
+				ShortMenuLoader.SceneEditInstance.AddMenuItemToList(mi2);
 				//this.AddMenuItemToList(mi2);
 				menuList.Add(mi2);
-				if (!Main.SceneEditInstance.m_menuRidDic.ContainsKey(mi2.m_nMenuFileRID))
+				if (!ShortMenuLoader.SceneEditInstance.m_menuRidDic.ContainsKey(mi2.m_nMenuFileRID))
 				{
-					Main.SceneEditInstance.m_menuRidDic.Add(mi2.m_nMenuFileRID, mi2);
+					ShortMenuLoader.SceneEditInstance.m_menuRidDic.Add(mi2.m_nMenuFileRID, mi2);
 				}
 				else
 				{
-					Main.SceneEditInstance.m_menuRidDic[mi2.m_nMenuFileRID] = mi2;
+					ShortMenuLoader.SceneEditInstance.m_menuRidDic[mi2.m_nMenuFileRID] = mi2;
 				}
-				//string parentMenuName = AccessTools.Method(typeof(SceneEdit), "GetParentMenuFileName").Invoke(Main.@this, new object[] { mi2 }) as string;
+				//string parentMenuName = AccessTools.Method(typeof(SceneEdit), "GetParentMenuFileName").Invoke(ShortMenuLoader.@this, new object[] { mi2 }) as string;
 				var parentMenuName = SceneEdit.GetParentMenuFileName(mi2);
 				//string parentMenuName = SceneEdit.GetParentMenuFileName(mi2);
 				if (!string.IsNullOrEmpty(parentMenuName))
@@ -138,14 +138,14 @@ namespace ShortMenuLoader
 					mi2.m_listMember = new List<SceneEdit.SMenuItem> { mi2 };
 				}
 
-				if (Main.BreakInterval.Value < Time.realtimeSinceStartup - Main.Time)
+				if (ShortMenuLoader.BreakInterval.Value < Time.realtimeSinceStartup - ShortMenuLoader.Time)
 				{
 					yield return null;
-					Main.Time = Time.realtimeSinceStartup;
+					ShortMenuLoader.Time = Time.realtimeSinceStartup;
 				}
 			}
-			Main.ThreadsDone++;
-			Main.PLogger.LogInfo($".Mods finished loading at: {Main.WatchOverall.Elapsed}");
+			ShortMenuLoader.ThreadsDone++;
+			ShortMenuLoader.PLogger.LogInfo($".Mods finished loading at: {ShortMenuLoader.WatchOverall.Elapsed}");
 		}
 
 		public static bool InitModMenuItemScript(SceneEdit.SMenuItem mi, string fStrModFileName, out byte[] icon)
@@ -160,7 +160,7 @@ namespace ShortMenuLoader
 					var text = binaryReader.ReadString();
 					if (text != "CM3D2_MOD")
 					{
-						Main.PLogger.LogError("InitModMenuItemScript (例外 : ヘッダーファイルが不正です。) The following header for this file indicates that this is not a mod file: " + text + " @ " + fStrModFileName);
+						ShortMenuLoader.PLogger.LogError("InitModMenuItemScript (例外 : ヘッダーファイルが不正です。) The following header for this file indicates that this is not a mod file: " + text + " @ " + fStrModFileName);
 
 						return false;
 					}
@@ -179,7 +179,7 @@ namespace ShortMenuLoader
 					}
 					catch
 					{
-						Main.PLogger.LogError("(カテゴリがありません。) There is no category called: " + text5 + " @ " + fStrModFileName);
+						ShortMenuLoader.PLogger.LogError("(カテゴリがありません。) There is no category called: " + text5 + " @ " + fStrModFileName);
 
 						return false;
 					}
@@ -212,7 +212,7 @@ namespace ShortMenuLoader
 					mi.m_strInfo = text4.Replace("《改行》", "\n");
 					mi.m_strCateName = strCateName;
 
-					if (Main.PutMenuFileNameInItemDescription.Value)
+					if (ShortMenuLoader.PutMenuFileNameInItemDescription.Value)
 					{
 						mi.m_strInfo += $"\n\n{Path.GetFileName(fStrModFileName)}";
 					}
@@ -223,7 +223,7 @@ namespace ShortMenuLoader
 					}
 					catch
 					{
-						Main.PLogger.LogWarning("(カテゴリがありません。) There is no category called: " + mi.m_strCateName + " @ " + fStrModFileName);
+						ShortMenuLoader.PLogger.LogWarning("(カテゴリがありません。) There is no category called: " + mi.m_strCateName + " @ " + fStrModFileName);
 						mi.m_mpn = MPN.null_mpn;
 					}
 
@@ -268,7 +268,7 @@ namespace ShortMenuLoader
 									}
 									catch
 									{
-										Main.PLogger.LogError("(無限色IDがありません。) There is no infinite color ID called: " + text8 + " @ " + fStrModFileName);
+										ShortMenuLoader.PLogger.LogError("(無限色IDがありません。) There is no infinite color ID called: " + text8 + " @ " + fStrModFileName);
 									}
 									mi.m_pcMultiColorID = pcMultiColorId;
 								}
@@ -279,7 +279,7 @@ namespace ShortMenuLoader
 			}
 			catch (Exception ex)
 			{
-				Main.PLogger.LogError("InitModMenuItemScript The following MOD item menu file could not be loaded (MODアイテムメニューファイルが読み込めませんでした。) : " + fStrModFileName + "\n\n" + ex.Message + "\n" + ex.StackTrace);
+				ShortMenuLoader.PLogger.LogError("InitModMenuItemScript The following MOD item menu file could not be loaded (MODアイテムメニューファイルが読み込めませんでした。) : " + fStrModFileName + "\n\n" + ex.Message + "\n" + ex.StackTrace);
 				return false;
 			}
 			return true;

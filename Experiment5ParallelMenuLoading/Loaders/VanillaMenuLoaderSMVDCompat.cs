@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 
-namespace ShortMenuLoader
+namespace ShortMenuLoader.Loaders
 {
 	internal class VanillaMenuLoaderSmvdCompat
 	{
 		internal static void ReadMenuItemDataFromNative(SceneEdit.SMenuItem mi, int menuDataBaseIndex, out string iconStr)
 		{
-			var menuDataBase = ShortMenuVanillaDatabase.Main.Database.MenusList;
+			var menuDataBase = ShortMenuVanillaDatabase.ShortMenuVanillaDatabase.Database.MenusList;
 			mi.m_strMenuName = menuDataBase[menuDataBaseIndex].Name;
 			mi.m_strInfo = menuDataBase[menuDataBaseIndex].Description;
 			mi.m_mpn = menuDataBase[menuDataBaseIndex].Category;
@@ -20,7 +20,7 @@ namespace ShortMenuLoader
 			mi.m_bOld = menuDataBase[menuDataBaseIndex].Version < 2000;
 			iconStr = menuDataBase[menuDataBaseIndex].Icon;
 
-			if (Main.PutMenuFileNameInItemDescription.Value)
+			if (ShortMenuLoader.PutMenuFileNameInItemDescription.Value)
 			{
 				mi.m_strInfo += $"\n\n{menuDataBase[menuDataBaseIndex].FileName}";
 			}
@@ -28,7 +28,7 @@ namespace ShortMenuLoader
 
 		internal static void LoadFromSmvdDictionary(ref Dictionary<SceneEdit.SMenuItem, int> filesToLoadFromDatabase)
 		{
-			foreach (var menu in ShortMenuVanillaDatabase.Main.Database.MenusList)
+			foreach (var menu in ShortMenuVanillaDatabase.ShortMenuVanillaDatabase.Database.MenusList)
 			{
 				var fileName = menu.FileName;
 
@@ -40,7 +40,7 @@ namespace ShortMenuLoader
 						m_nMenuFileRID = fileName.GetHashCode()
 					};
 
-					filesToLoadFromDatabase[mi] = ShortMenuVanillaDatabase.Main.Database.MenusList.FindIndex(r => r.Equals(menu));
+					filesToLoadFromDatabase[mi] = ShortMenuVanillaDatabase.ShortMenuVanillaDatabase.Database.MenusList.FindIndex(r => r.Equals(menu));
 				}
 			}
 		}

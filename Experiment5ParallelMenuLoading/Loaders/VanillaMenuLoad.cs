@@ -1,15 +1,15 @@
-﻿using HarmonyLib;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using HarmonyLib;
+using Newtonsoft.Json;
 using UnityEngine;
 
-namespace ShortMenuLoader
+namespace ShortMenuLoader.Loaders
 {
 	internal class VanillaMenuLoad
 	{
@@ -21,7 +21,7 @@ namespace ShortMenuLoader
 		{
 			_cacheLoadDone = false;
 
-			if (!Main.SmvdLoaded && Main.UseVanillaCache.Value)
+			if (!ShortMenuLoader.SmvdLoaded && ShortMenuLoader.UseVanillaCache.Value)
 			{
 				var cacheLoader = Task.Factory.StartNew(() =>
 				{
@@ -46,20 +46,20 @@ namespace ShortMenuLoader
 					{
 						if (cacheLoader.Exception?.InnerException != null)
 						{
-							Main.PLogger.LogError(
+							ShortMenuLoader.PLogger.LogError(
 								$"There was an error while attempting to load the vanilla cache: \n{cacheLoader.Exception.InnerException.Message}\n{cacheLoader.Exception.InnerException.StackTrace}\n\nAn attempt will be made to restart the load task...");
 						}
 
 						yield return new WaitForSecondsRealtime(5);
 
-						Main.PlugInstance.StartCoroutine(LoadCache(++retry));
+						ShortMenuLoader.PlugInstance.StartCoroutine(LoadCache(++retry));
 
 						yield break;
 					}
 
 					if (cacheLoader.Exception?.InnerException != null)
 					{
-						Main.PLogger.LogError(
+						ShortMenuLoader.PLogger.LogError(
 							$"There was an error while attempting to load the vanilla cache: \n{cacheLoader.Exception.InnerException.Message}\n{cacheLoader.Exception.InnerException.StackTrace}\n\nThis is the 4th attempt to kick-start the task. Cache will be deleted and rebuilt next time.");
 					}
 
@@ -73,7 +73,7 @@ namespace ShortMenuLoader
 
 		public static IEnumerator SaveCache(Dictionary<SceneEdit.SMenuItem, string> filesToLoad, int retry = 0)
 		{
-			if (Main.SmvdLoaded || !Main.UseVanillaCache.Value)
+			if (ShortMenuLoader.SmvdLoaded || !ShortMenuLoader.UseVanillaCache.Value)
 			{
 				yield break;
 			}
@@ -90,7 +90,7 @@ namespace ShortMenuLoader
 
 				File.WriteAllText(CacheFile, JsonConvert.SerializeObject(_menuCache));
 
-				Main.PLogger.LogInfo("Finished cleaning and saving the mod cache...");
+				ShortMenuLoader.PLogger.LogInfo("Finished cleaning and saving the mod cache...");
 			});
 
 			while (cacheSaver.IsCompleted == false)
@@ -107,19 +107,19 @@ namespace ShortMenuLoader
 			{
 				if (cacheSaver.Exception?.InnerException != null)
 				{
-					Main.PLogger.LogError(
+					ShortMenuLoader.PLogger.LogError(
 						$"Cache saver task failed due to an unexpected error! SceneEditInstance is considered a minor failure: {cacheSaver.Exception.InnerException.Message}\n{cacheSaver.Exception.InnerException.StackTrace}\n\nAn attempt will be made to restart the task again...");
 				}
 
 				yield return new WaitForSecondsRealtime(5);
 
-				Main.PlugInstance.StartCoroutine(SaveCache(filesToLoad, ++retry));
+				ShortMenuLoader.PlugInstance.StartCoroutine(SaveCache(filesToLoad, ++retry));
 			}
 			else
 			{
 				if (cacheSaver.Exception?.InnerException != null)
 				{
-					Main.PLogger.LogFatal(
+					ShortMenuLoader.PLogger.LogFatal(
 						$"Cache saver task failed due to an unexpected error! SceneEditInstance is considered a minor failure: {cacheSaver.Exception.InnerException.Message}\n{cacheSaver.Exception.InnerException.StackTrace}\n\nNo further attempts will be made to start the task again...");
 
 					throw cacheSaver.Exception.InnerException;
@@ -155,7 +155,7 @@ namespace ShortMenuLoader
 
 			//SceneEditInstance entire for loop is what loads in normal game menus. It's been left relatively untouched.
 
-			if (!Main.SmvdLoaded)
+			if (!ShortMenuLoader.SmvdLoaded)
 			{
 				var fileCount = menuDataBase.GetDataSize();
 
@@ -181,7 +181,7 @@ namespace ShortMenuLoader
 				VanillaMenuLoaderSmvdCompat.LoadFromSmvdDictionary(ref filesToLoadFromDatabase);
 			}
 
-			if (_cacheLoadDone != true && Main.UseVanillaCache.Value)
+			if (_cacheLoadDone != true && ShortMenuLoader.UseVanillaCache.Value)
 			{
 				yield return new TimedWaitUntil(() => _cacheLoadDone, 0.5f);
 			}
@@ -192,7 +192,7 @@ namespace ShortMenuLoader
 				{
 					string iconFileName = null;
 
-					if (_menuCache.ContainsKey(mi.m_strMenuFileName) && Main.UseVanillaCache.Value)
+					if (_menuCache.ContainsKey(mi.m_strMenuFileName) && ShortMenuLoader.UseVanillaCache.Value)
 					{
 						var tempStub = _menuCache[mi.m_strMenuFileName];
 
@@ -214,14 +214,14 @@ namespace ShortMenuLoader
 						}
 						else
 						{
-							Main.PLogger.LogWarning("GameData folder was changed! We'll be wiping the vanilla cache clean and rebuilding it now.");
+							ShortMenuLoader.PLogger.LogWarning("GameData folder was changed! We'll be wiping the vanilla cache clean and rebuilding it now.");
 							_menuCache = new Dictionary<string, MenuStub>();
 						}
 					}
 
 					if (string.IsNullOrEmpty(mi.m_strMenuName))
 					{
-						//Main.PLogger.LogInfo($"Loading {mi.m_strMenuFileName} from the database as it wasn't in cache...");
+						//ShortMenuLoader.PLogger.LogInfo($"Loading {mi.m_strMenuFileName} from the database as it wasn't in cache...");
 						ReadMenuItemDataFromNative(mi, filesToLoadFromDatabase[mi], out iconFileName);
 					}
 
@@ -245,7 +245,7 @@ namespace ShortMenuLoader
 				}
 				catch (Exception ex)
 				{
-					Main.PLogger.LogError(string.Concat("ReadMenuItemDataFromNative Exception(例外):", mi.m_strMenuFileName, "\n\n", ex.Message, " StackTrace／", ex.StackTrace));
+					ShortMenuLoader.PLogger.LogError(string.Concat("ReadMenuItemDataFromNative Exception(例外):", mi.m_strMenuFileName, "\n\n", ex.Message, " StackTrace／", ex.StackTrace));
 				}
 			}
 
@@ -257,14 +257,14 @@ namespace ShortMenuLoader
 			foreach (var mi in filesToLoad.Keys)
 			{
 				//Added the CRC checks to make this plug compatible with 3.xx
-				if (!mi.m_bMan && !mi.m_strMenuFileName.Contains("_crc") && !mi.m_strMenuFileName.Contains("crc_") && !GsModMenuLoad.FilesDictionary.ContainsKey(mi.m_strMenuFileName) && Main.SceneEditInstance.editItemTextureCache.IsRegister(mi.m_nMenuFileRID))
+				if (!mi.m_bMan && !mi.m_strMenuFileName.Contains("_crc") && !mi.m_strMenuFileName.Contains("crc_") && !GsModMenuLoad.FilesDictionary.ContainsKey(mi.m_strMenuFileName) && ShortMenuLoader.SceneEditInstance.editItemTextureCache.IsRegister(mi.m_nMenuFileRID))
 				{
-					AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(Main.SceneEditInstance, new object[] { mi });
+					AccessTools.Method(typeof(SceneEdit), "AddMenuItemToList").Invoke(ShortMenuLoader.SceneEditInstance, new object[] { mi });
 
 					menuList.Add(mi);
 
-					Main.SceneEditInstance.m_menuRidDic[mi.m_nMenuFileRID] = mi;
-					var parentMenuName = AccessTools.Method(typeof(SceneEdit), "GetParentMenuFileName").Invoke(Main.SceneEditInstance, new object[] { mi }) as string;
+					ShortMenuLoader.SceneEditInstance.m_menuRidDic[mi.m_nMenuFileRID] = mi;
+					var parentMenuName = AccessTools.Method(typeof(SceneEdit), "GetParentMenuFileName").Invoke(ShortMenuLoader.SceneEditInstance, new object[] { mi }) as string;
 
 					if (!string.IsNullOrEmpty(parentMenuName))
 					{
@@ -284,26 +284,26 @@ namespace ShortMenuLoader
 							};
 					}
 
-					if (Main.BreakInterval.Value < Time.realtimeSinceStartup - Main.Time)
+					if (ShortMenuLoader.BreakInterval.Value < Time.realtimeSinceStartup - ShortMenuLoader.Time)
 					{
 						yield return null;
-						Main.Time = Time.realtimeSinceStartup;
+						ShortMenuLoader.Time = Time.realtimeSinceStartup;
 					}
 				}
 			}
 
-			Main.ThreadsDone++;
-			Main.PLogger.LogInfo($"Vanilla menus finished loading at: {Main.WatchOverall.Elapsed}. "
-			+ (Main.SmvdLoaded == false ?
+			ShortMenuLoader.ThreadsDone++;
+			ShortMenuLoader.PLogger.LogInfo($"Vanilla menus finished loading at: {ShortMenuLoader.WatchOverall.Elapsed}. "
+			+ (ShortMenuLoader.SmvdLoaded == false ?
 			$"We also spent {waitOnKiss.Elapsed} waiting for an unmodified database to finish loading..."
 			: $"We also spent {waitOnKiss.Elapsed} waiting for SMVD's Database to load..."));
 
-			Main.SceneEditInstance.StartCoroutine(SaveCache(filesToLoad));
+			ShortMenuLoader.SceneEditInstance.StartCoroutine(SaveCache(filesToLoad));
 		}
 
 		public static void ReadMenuItemDataFromNative(SceneEdit.SMenuItem mi, int menuDataBaseIndex, out string iconStr)
 		{
-			if (!Main.SmvdLoaded)
+			if (!ShortMenuLoader.SmvdLoaded)
 			{
 				var menuDataBase = GameMain.Instance.MenuDataBase;
 				menuDataBase.SetIndex(menuDataBaseIndex);
@@ -320,7 +320,7 @@ namespace ShortMenuLoader
 				mi.m_bOld = menuDataBase.GetVersion() < 2000;
 				iconStr = menuDataBase.GetIconS();
 
-				if (Main.UseVanillaCache.Value)
+				if (ShortMenuLoader.UseVanillaCache.Value)
 				{
 					var newStub = new MenuStub
 					{
@@ -340,7 +340,7 @@ namespace ShortMenuLoader
 					_menuCache[mi.m_strMenuFileName] = newStub;
 				}
 
-				if (Main.PutMenuFileNameInItemDescription.Value)
+				if (ShortMenuLoader.PutMenuFileNameInItemDescription.Value)
 				{
 					mi.m_strInfo += $"\n\n{menuDataBase.GetMenuFileName()}";
 				}

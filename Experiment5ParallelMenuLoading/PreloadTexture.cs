@@ -54,7 +54,7 @@ namespace ShortMenuLoader
 			}
 			catch (Exception ex)
 			{
-				Main.PLogger.LogError($"Failed to create texture {TextureName} with an issue of: {ex.Message}\n" +
+				ShortMenuLoader.PLogger.LogError($"Failed to create texture {TextureName} with an issue of: {ex.Message}\n" +
 									  $"Image Params: {_width}x{_height} {_format.ToString()}\n" +
 									  "We will return a blank texture as a placeholder. Please correct the file as it may have an issue...");
 				_texture = Texture2D.whiteTexture;

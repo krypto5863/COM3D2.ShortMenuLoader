@@ -31,21 +31,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="TimedWaitUntil.cs" />
-    <Compile Include="Loaders\GSModMenuLoad.cs" />
-    <Compile Include="Loaders\VanillaMenuLoaderSMVDCompat.cs" />
-    <Compile Include="MenuStub.cs" />
-    <Compile Include="Loaders\ModMenuLoad.cs" />
     <None Include="packages.config" />
-    <Compile Include="PreLoadTexture.cs" />
-    <Compile Include="QuickEdit.cs" />
-    <Compile Include="Loaders\VanillaMenuLoad.cs" />
-    <Compile Include="QuickEditVanilla.cs" />
-    <None Include="0OldClasses\ControlClass.cs" />
-    <None Include="0OldClasses\Main - TPLimplementation2.cs" />
-    <None Include="0OldClasses\Main - TPLimplementation.cs" />
-    <None Include="0OldClasses\Main.cs" />
-    <Compile Include="ShortMenuLoader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -84,6 +70,7 @@
       <Name>ShortMenuVanillaDatabase</Name>
     </ProjectReference>
   </ItemGroup>
+  <Import Project="..\ShortMenuLoader.Core\ShortMenuLoader.Core.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>del "G:\KISS\COM3D2Test\BepinEx\plugins\$(TargetFileName)"

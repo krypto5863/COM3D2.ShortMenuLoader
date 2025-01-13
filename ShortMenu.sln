@@ -1,15 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.12.35527.113
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShortMenuLoader", "Experiment5ParallelMenuLoading\ShortMenuLoader.csproj", "{03EB691B-85D1-4EDF-8290-EAA206161458}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShortMenuVanillaDatabase", "..\MenuDatabaseReplacer\MenuDatabaseReplacer\ShortMenuVanillaDatabase.csproj", "{345C5AB0-706F-4961-B699-ED95DA7117EA}"
-EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "ShortMenuLoader.Core", "ShortMenuLoader.Core\ShortMenuLoader.Core.shproj", "{7C0AD521-8A24-438A-A375-71BBBAE1CB0D}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShortMenuLoader.TwoFive", "ShortMenuLoader.TwoFive\ShortMenuLoader.TwoFive.csproj", "{8A962365-999A-4278-9F35-CE4204D4CA95}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,20 +21,11 @@ Global
 		{345C5AB0-706F-4961-B699-ED95DA7117EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{345C5AB0-706F-4961-B699-ED95DA7117EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{345C5AB0-706F-4961-B699-ED95DA7117EA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8A962365-999A-4278-9F35-CE4204D4CA95}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8A962365-999A-4278-9F35-CE4204D4CA95}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8A962365-999A-4278-9F35-CE4204D4CA95}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8A962365-999A-4278-9F35-CE4204D4CA95}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AF2F84E4-1F11-4BCF-AA77-2101A54E0E4C}
-	EndGlobalSection
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		ShortMenuLoader.Core\ShortMenuLoader.Core.projitems*{03eb691b-85d1-4edf-8290-eaa206161458}*SharedItemsImports = 4
-		ShortMenuLoader.Core\ShortMenuLoader.Core.projitems*{7c0ad521-8a24-438a-a375-71bbbae1cb0d}*SharedItemsImports = 13
-		ShortMenuLoader.Core\ShortMenuLoader.Core.projitems*{8a962365-999a-4278-9f35-ce4204d4ca95}*SharedItemsImports = 5
 	EndGlobalSection
 EndGlobal

@@ -57,12 +57,11 @@ namespace ShortMenuLoader
 				.Select(t => Path.GetFileName(t).ToLower())
 				.ToArray();
 
-#if !TwoFive
 			var hasDependencies = plugs.Contains("system.threading.dll");
 
 			if (!hasDependencies)
 			{
-				PLogger.LogFatal("SML is missing some dependencies! Your game will now quit!");
+				PLogger.LogFatal("SMVD is missing some dependencies! Your game will now quit!");
 
 				var message =
 					"ShortMenuLoader is missing System.Threading.dll!"
@@ -70,7 +69,6 @@ namespace ShortMenuLoader
 
 				Assert(message, "Missing Reference!");
 			}
-#endif
 
 			//We set our patcher so we can call it back and patch dynamically as needed.
 			_harmony = Harmony.CreateAndPatchAll(typeof(ShortMenuLoader));

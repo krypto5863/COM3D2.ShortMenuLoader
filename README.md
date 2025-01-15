@@ -27,7 +27,7 @@ Changes this big bring some downsides. Luckily, this one has few.
 ~~SML does not support versions 3.0/CR-Edit of COM! We support the 2.0 branch and the latest R18 English releases. INM may work fine but it may not.~~
 Since version 1.6, SML only supports 3.41+ and english equivalents.
 
-[COM3D2.API](https://github.com/krypto5863/COM3D2.API) is now required. So make sure you have the latest veersion before proceeding.
+[COM3D2.API](https://github.com/krypto5863/COM3D2.API) is now required. So make sure you have the latest version before proceeding.
 
 This plugin is as simple as drop in and play. From the releases section, drop the two DLLs into `BepinEx/plugins`.
 

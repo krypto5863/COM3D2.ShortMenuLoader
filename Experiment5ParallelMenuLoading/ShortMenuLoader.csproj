@@ -1,42 +1,90 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{03EB691B-85D1-4EDF-8290-EAA206161458}</ProjectGuid>
     <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ShortMenuLoader</RootNamespace>
     <AssemblyName>COM3D2.ShortMenuLoader</AssemblyName>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="PreloadTexture.cs" />
-    <None Include="QuickEdit.cs" />
+    <Compile Include="TimedWaitUntil.cs" />
+    <Compile Include="Loaders\GSModMenuLoad.cs" />
+    <Compile Include="Loaders\VanillaMenuLoaderSMVDCompat.cs" />
+    <Compile Include="MenuStub.cs" />
+    <Compile Include="Loaders\ModMenuLoad.cs" />
+    <None Include="packages.config" />
+    <Compile Include="PreLoadTexture.cs" />
+    <Compile Include="QuickEdit.cs" />
+    <Compile Include="Loaders\VanillaMenuLoad.cs" />
+    <Compile Include="QuickEditVanilla.cs" />
+    <None Include="0OldClasses\ControlClass.cs" />
+    <None Include="0OldClasses\Main - TPLimplementation2.cs" />
+    <None Include="0OldClasses\Main - TPLimplementation.cs" />
+    <None Include="0OldClasses\Main.cs" />
+    <Compile Include="ShortMenuLoader.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\COM3D2.API\src\API\COM3D2.API.csproj" />
-    <ProjectReference Include="..\..\MenuDatabaseReplacer\MenuDatabaseReplacer\ShortMenuVanillaDatabase.csproj" />
+    <Reference Include="0Harmony, Version=2.5.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\Game Related Files\Meido Related Stuff\Meido Assemblies\COM Assemblies\BepinEx\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\Game Related Files\Meido Related Stuff\Meido Assemblies\COM Assemblies\GameOriginal 2.6.1\allalone\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\Game Related Files\Meido Related Stuff\Meido Assemblies\COM Assemblies\GameOriginal 2.6.1\firstpass\Assembly-CSharp-firstpass.dll</HintPath>
+    </Reference>
+    <Reference Include="BepInEx, Version=5.4.15.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\Game Related Files\Meido Related Stuff\Meido Assemblies\COM Assemblies\BepinEx\BepInEx.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\Game Related Files\Meido Related Stuff\Meido Assemblies\COM Assemblies\GameOriginal 2.6.1\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Threading, Version=1.0.3333.0, Culture=neutral, PublicKeyToken=402899b480e6f383, processorArchitecture=MSIL">
+      <HintPath>..\packages\TaskParallelLibrary.Repackaged.1.0.4-custom\lib\Net35\System.Threading.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\Game Related Files\Meido Related Stuff\Meido Assemblies\COM Assemblies\GameOriginal 2.6.1\UnityEngine.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="PreloadTexture.cs" />
-    <Compile Remove="QuickEdit.cs" />
+    <ProjectReference Include="..\..\MenuDatabaseReplacer\MenuDatabaseReplacer\ShortMenuVanillaDatabase.csproj">
+      <Project>{345c5ab0-706f-4961-b699-ed95da7117ea}</Project>
+      <Name>ShortMenuVanillaDatabase</Name>
+    </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
-    <PackageReference Include="COM3D2.GameLibs" Version="3.41.0-r.0" />
-    <PackageReference Include="MessagePack" Version="3.1.1" />
-    <PackageReference Include="System.Memory" Version="4.6.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>G:\KISS\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath>G:\KISS\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\UnityEngine.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>G:\KISS\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>G:\KISS\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>del "G:\KISS\COM3D2Test\BepinEx\plugins\$(TargetFileName)"
 copy "$(TargetPath)" "G:\KISS\COM3D2Test\BepinEx\plugins"

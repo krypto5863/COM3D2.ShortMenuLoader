@@ -7,9 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using COM3D2API.Utilities;
-using MessagePack;
-using MessagePack.Resolvers;
+using Newtonsoft.Json;
 using UnityEngine;
 using TMonitor = System.Threading.Monitor;
 
@@ -21,13 +19,9 @@ namespace ShortMenuLoader.Loaders
 		public static bool DictionaryBuilt;
 		private static readonly Dictionary<string, MemoryStream> FilesToRead = new Dictionary<string, MemoryStream>();
 
-		private static readonly string CacheFile = BepInEx.Paths.CachePath + "\\ShortMenuLoaderCache";
+		private static readonly string CacheFile = BepInEx.Paths.CachePath + "\\ShortMenuLoaderCache.json";
 		private static bool _cacheLoadDone;
 		private static Dictionary<string, MenuStub> _menuCache = new Dictionary<string, MenuStub>();
-
-		private static MessagePackSerializerOptions _serializerOptions = MessagePackSerializerOptions.Standard.WithResolver(
-			ContractlessStandardResolver.Instance
-			);
 
 		private static int _mutexTimeoutCounter;
 
@@ -39,9 +33,9 @@ namespace ShortMenuLoader.Loaders
 			{
 				if (File.Exists(CacheFile))
 				{
-					var jsonString = File.ReadAllBytes(CacheFile);
+					var jsonString = File.ReadAllText(CacheFile);
 
-					var tempDic = MessagePackSerializer.Deserialize<Dictionary<string, MenuStub>>(jsonString, _serializerOptions);//JsonConvert.DeserializeObject<Dictionary<string, MenuStub>>(jsonString);
+					var tempDic = JsonConvert.DeserializeObject<Dictionary<string, MenuStub>>(jsonString);
 
 					_menuCache = tempDic;
 				}
@@ -85,7 +79,7 @@ namespace ShortMenuLoader.Loaders
 					.Where(k => FilesDictionary.Keys.Contains(k.Key))
 					.ToDictionary(t => t.Key, l => l.Value);
 
-				File.WriteAllBytes(CacheFile, MessagePackSerializer.Serialize(_menuCache, _serializerOptions));
+				File.WriteAllText(CacheFile, JsonConvert.SerializeObject(_menuCache, Formatting.Indented));
 
 				ShortMenuLoader.PLogger.LogDebug("Finished cleaning and saving the mod cache...");
 			});
@@ -273,11 +267,10 @@ namespace ShortMenuLoader.Loaders
 						if (iconLoad != null)
 						{
 							listOfLoads.Add(mi2);
-							BackgroundIconLoader.RegisterRidIcon(mi2.m_nMenuFileRID, iconLoad);
-							//QuickEdit.FRidsToStubs[mi2.m_nMenuFileRID] = iconLoad;
 
-							//Making it a blank texture makes it act differently. It's a bit weird but this way it can interact with the BackgroundIconLoader.
-							//mi2.m_texIcon = Texture2D.whiteTexture;
+							QuickEdit.FRidsToStubs[mi2.m_nMenuFileRID] = iconLoad;
+
+							mi2.m_texIcon = Texture2D.whiteTexture;
 						}
 					}
 

@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using COM3D2API.Utilities;
 using UnityEngine;
 
 namespace ShortMenuLoader.Loaders

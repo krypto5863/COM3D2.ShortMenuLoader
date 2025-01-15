@@ -29,7 +29,7 @@ Since version 1.6, SML only supports 3.41+ and english equivalents.
 
 [COM3D2.API](https://github.com/krypto5863/COM3D2.API) is now required. So make sure you have the latest version before proceeding.
 
-This plugin is as simple as drop in and play. From the releases section, drop the two DLLs into `BepinEx/plugins`.
+This plugin is as simple as drop in and play. From the releases section, drop the DLL into `BepinEx/plugins`.
 
 The following plugins can and should be removed as they are no longer utilized if SML is installed:
 - QuickEditStart

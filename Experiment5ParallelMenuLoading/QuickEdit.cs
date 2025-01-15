@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using SceneEditWindow;
 using UnityEngine;
 using TMonitor = System.Threading.Monitor;
 
@@ -34,6 +35,8 @@ namespace ShortMenuLoader
 
 		internal static void EngageModPreLoader()
 		{
+			Texture.allowThreadedTextureCreation = true;
+
 			if (_fTextureLoaderCoRoute != null)
 			{
 				return;
@@ -43,8 +46,9 @@ namespace ShortMenuLoader
 			ShortMenuLoader.SceneEditInstance.StartCoroutine(_fTextureLoaderCoRoute);
 		}
 
-		//Despite how it may appear, this is used, it's patched manually in ShortMenuLoader.Awake
-		private static void MenuItemSet(ref SceneEdit.SMenuItem __1)
+		[HarmonyPatch(typeof(SceneEdit.ColorItemSet), MethodType.Constructor, typeof(GameObject), typeof(SceneEdit.SMenuItem))]
+		[HarmonyPatch(typeof(SceneEdit.MenuItemSet), MethodType.Constructor, typeof(GameObject), typeof(SceneEdit.SMenuItem), typeof(string), typeof(bool))]
+		internal static void MenuItemSet(ref SceneEdit.SMenuItem __1)
 		{
 			if (!FRidsToStubs.ContainsKey(__1.m_nMenuFileRID))
 			{
@@ -67,9 +71,9 @@ namespace ShortMenuLoader
 			}
 		}
 
-		[HarmonyPatch(typeof(RandomPresetCtrl), "GetTextureByRid")]
-		[HarmonyPatch(typeof(RandomPresetCtrl), "GetColorTextureByRid")]
-		[HarmonyPatch(typeof(CostumePartsEnabledCtrl), "GetTextureByRid")]
+		[HarmonyPatch(typeof(RandomPresetCtrl), nameof(RandomPresetCtrl.GetTextureByRid))]
+		[HarmonyPatch(typeof(RandomPresetCtrl), nameof(RandomPresetCtrl.GetColorTextureByRid))]
+		[HarmonyPatch(typeof(CostumePartsEnabledCtrl), nameof(CostumePartsEnabledCtrl.GetTextureByRid))]
 		[HarmonyPrefix]
 		private static bool GetTextureByRid(ref Texture2D __result, int __2)
 		{
@@ -82,9 +86,9 @@ namespace ShortMenuLoader
 			return false;
 		}
 
-		[HarmonyPatch(typeof(SceneEditWindow.CustomViewItem), "UpdateIcon")]
+		[HarmonyPatch(typeof(CustomViewItem), nameof(CustomViewItem.UpdateIcon))]
 		[HarmonyPrefix]
-		private static void UpdateIcon(ref SceneEditWindow.CustomViewItem __instance, Maid __0)
+		private static void UpdateIcon(ref CustomViewItem __instance, Maid __0)
 		{
 			if (__0 == null)
 			{
@@ -100,9 +104,10 @@ namespace ShortMenuLoader
 
 			if (menuItem == null || menuItem.m_boDelOnly && __instance.defaultIconTexture != null || menuItem.m_texIcon == null && __instance.defaultIconTexture != null)
 			{
-				//Do Nothing
+				return;
 			}
-			else if (menuItem.m_texIcon == null || menuItem.m_texIcon == Texture2D.whiteTexture)
+
+			if (menuItem.m_texIcon == null || menuItem.m_texIcon == Texture2D.whiteTexture)
 			{
 				if (FRidsToStubs.ContainsKey(menuItem.m_nMenuFileRID))
 				{
@@ -273,8 +278,6 @@ namespace ShortMenuLoader
 					throw loaderWorker.Exception.InnerException;
 				}
 			}
-
-			//QuickEditVanilla.EngageVanillaPreloader();
 		}
 
 		public static PreLoadTexture LoadTextureFromModFolder(string fStrFileName)

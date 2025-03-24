@@ -6,16 +6,7 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="PreloadTexture.cs" />
-    <None Include="QuickEdit.cs" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\..\COM3D2.API\src\API\COM3D2.API.csproj" />
-    <ProjectReference Include="..\..\MenuDatabaseReplacer\MenuDatabaseReplacer\ShortMenuVanillaDatabase.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Remove="PreloadTexture.cs" />
-    <Compile Remove="QuickEdit.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
@@ -27,14 +18,17 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>G:\KISS\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
+    <Reference Include="Unity.Burst">
+      <HintPath>F:\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\Unity.Burst.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>G:\KISS\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>F:\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>G:\KISS\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>F:\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>G:\KISS\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+      <HintPath>F:\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
     </Reference>
   </ItemGroup>
   <PropertyGroup>

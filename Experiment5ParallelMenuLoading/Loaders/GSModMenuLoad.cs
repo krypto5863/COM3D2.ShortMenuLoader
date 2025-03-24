@@ -25,7 +25,7 @@ namespace ShortMenuLoader.Loaders
 		private static bool _cacheLoadDone;
 		private static Dictionary<string, MenuStub> _menuCache = new Dictionary<string, MenuStub>();
 
-		private static MessagePackSerializerOptions _serializerOptions = MessagePackSerializerOptions.Standard.WithResolver(
+		private static readonly MessagePackSerializerOptions SerializerOptions = MessagePackSerializerOptions.Standard.WithResolver(
 			ContractlessStandardResolver.Instance
 			);
 
@@ -41,7 +41,7 @@ namespace ShortMenuLoader.Loaders
 				{
 					var jsonString = File.ReadAllBytes(CacheFile);
 
-					var tempDic = MessagePackSerializer.Deserialize<Dictionary<string, MenuStub>>(jsonString, _serializerOptions);//JsonConvert.DeserializeObject<Dictionary<string, MenuStub>>(jsonString);
+					var tempDic = MessagePackSerializer.Deserialize<Dictionary<string, MenuStub>>(jsonString, SerializerOptions);//JsonConvert.DeserializeObject<Dictionary<string, MenuStub>>(jsonString);
 
 					_menuCache = tempDic;
 				}
@@ -85,7 +85,7 @@ namespace ShortMenuLoader.Loaders
 					.Where(k => FilesDictionary.Keys.Contains(k.Key))
 					.ToDictionary(t => t.Key, l => l.Value);
 
-				File.WriteAllBytes(CacheFile, MessagePackSerializer.Serialize(_menuCache, _serializerOptions));
+				File.WriteAllBytes(CacheFile, MessagePackSerializer.Serialize(_menuCache, SerializerOptions));
 
 				ShortMenuLoader.PLogger.LogDebug("Finished cleaning and saving the mod cache...");
 			});

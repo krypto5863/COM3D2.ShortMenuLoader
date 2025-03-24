@@ -21,7 +21,7 @@ namespace ShortMenuLoader
 {
 	[BepInPlugin(GUID, Name, Version)]
 	[BepInDependency("ShortMenuVanillaDatabase", BepInDependency.DependencyFlags.SoftDependency)]
-	[BepInDependency(COM3D2API.Com3D2Api.PluginGuid, COM3D2API.Com3D2Api.PluginVersion)]
+	[BepInDependency(COM3D2API.Com3D2Api.PluginGuid)]
 	internal class ShortMenuLoader : BaseUnityPlugin
 	{
 		public const string GUID = "org.krypto5863.com3d2.shortmenuloader";
@@ -41,12 +41,9 @@ namespace ShortMenuLoader
 		public static Stopwatch WatchOverall = new Stopwatch();
 		public static ConfigEntry<float> BreakInterval;
 		public static ConfigEntry<int> TimeoutLimit;
-		//public static ConfigEntry<bool> UseVanillaCache;
 		public static ConfigEntry<bool> ChangeModPriority;
 		public static ConfigEntry<bool> PutMenuFileNameInItemDescription;
 		public static ConfigEntry<bool> UseIconPreloader;
-
-		internal static bool SmvdLoaded;
 
 		private void Awake()
 		{
@@ -55,58 +52,7 @@ namespace ShortMenuLoader
 			PLogger.LogDebug("Starting SML awake now...");
 
 			PlugInstance = this;
-
-			/*
-			var plugs = Directory.GetFiles(Paths.PluginPath, "*", SearchOption.AllDirectories)
-				.Select(t => Path.GetFileName(t).ToLower())
-				.ToArray();
-
-			var hasDependencies = plugs.Contains("system.threading.dll");
-
-			if (!hasDependencies)
-			{
-				PLogger.LogFatal("SMVD is missing some dependencies! Your game will now quit!");
-
-				var message =
-					"ShortMenuLoader is missing System.Threading.dll!"
-					+ "\nShortMenuLoader には System.Threading.dll がないよ！";
-
-				Assert(message, "Missing Reference!");
-			}
-			*/
-
-			//We set our patcher so we can call it back and patch dynamically as needed.
 			_harmony = Harmony.CreateAndPatchAll(typeof(ShortMenuLoader));
-
-			/*
-			if (BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("ShortMenuVanillaDatabase"))
-			{
-				PLogger.LogDebug("SMVD is loaded! Optimizing for SMVD!");
-
-				SmvdLoaded = true;
-			}
-			else
-			{
-				PLogger.LogWarning("SMVD is not loaded! Consider installing ShortMenuVanillaDatabase for even better performance!");
-			}
-			*/
-			/*
-			MethodBase menuItemSetConstructor = typeof(SceneEdit)
-				.GetNestedType(nameof(MenuItemSet), BindingFlags.NonPublic)
-				.GetConstructor(
-					new[]
-					{ typeof(GameObject),
-						typeof(SMenuItem),
-						typeof(string),
-						typeof(bool)
-					});
-			MethodBase colorItemSetConstructor = typeof(SceneEdit).GetNestedType(nameof(ColorItemSet), BindingFlags.NonPublic).GetConstructor(new[] { typeof(GameObject), typeof(SMenuItem) });
-
-			_harmony.Patch(menuItemSetConstructor, new HarmonyMethod(typeof(QuickEditVanilla), nameof(QuickEditVanilla.MenuItemSet)));
-			_harmony.Patch(colorItemSetConstructor, new HarmonyMethod(typeof(QuickEditVanilla), nameof(QuickEditVanilla.MenuItemSet)));
-			//_harmony.PatchAll(typeof(QuickEdit));
-			*/
-			//_harmony.PatchAll(typeof(QuickEdit));
 			_harmony.PatchAll(typeof(BackgroundIconLoader));
 
 			PlugInstance.StartCoroutine(GsModMenuLoad.LoadCache());
@@ -114,30 +60,12 @@ namespace ShortMenuLoader
 			BreakInterval = Config.Bind("General", "Time Between Breaks in Seconds", 0.5f, "The break interval is the time between each break that the co-routine takes where it returns processing back to the main thread. After one frame, processing is given back to the co-routine. Higher values can help with low-end processing times but can cause instability if set too high. If after all of this you're still confused, leave it alone.");
 
 			TimeoutLimit = Config.Bind("General", "Mutex Timeout Limit", 50000, "The time in milliseconds to wait for a mutex to unlock before declaring it stalled and restarting the work task. Raise this if you're getting erroneous timed out waiting for mutex errors. Higher values are perfectly safe but you'll be waiting around longer if an error really does occur and the mutex never unlocks. Values below the default are not recommended, this can and will cause errors.");
-
-			/*
-			if (!SmvdLoaded)
-			{
-				UseVanillaCache = Config.Bind("General", "Use Vanilla Cache", false, "SceneEditInstance decides whether a vanilla cache is created, maintained and used on load. Kiss has it's own questionable implementation of a cache, but this cache is questionable in it's own right too. Disabled when you use SMVD.");
-			}
-			*/
-
 			ChangeModPriority = Config.Bind("General", "Add 10,000 to Mod Item Priority", false, "SceneEditInstance option simply adds 10,000 priority to all mod items loaded. Handy if you don't want mod items mix and matching with vanilla stuff or appearing before the remove button.");
 
 			PutMenuFileNameInItemDescription = Config.Bind("General", "Append Menu file Names to Descriptions", false, "SceneEditInstance option appends menu file names to the descriptions of the items. Useful for modders or for users looking to take out certain mods. Will not work if activated when already in edit mode.");
 
 			UseIconPreloader = Config.Bind("General", "Whether to use the IconPreloader for mod files.", true, "In some users with weaker computers, this can cause massive slowdowns or ram over-usage. For these users, it might be more desirable to leave this off.");
-
-			//PlugInstance.StartCoroutine(VanillaMenuLoad.LoadCache());
 		}
-		/*
-		private static void Assert(string message, string title)
-		{
-			NUty.WinMessageBox(NUty.GetWindowHandle(), message, title, 0x00000010 | 0x00000000);
-			Application.Quit();
-		}
-		*/
-
 		//Slightly out of scope but it serves to accomadate placing menu paths in descriptions. Silly kiss.
 		[HarmonyPatch(typeof(ItemInfoWnd), nameof(ItemInfoWnd.Open))]
 		[HarmonyPostfix]

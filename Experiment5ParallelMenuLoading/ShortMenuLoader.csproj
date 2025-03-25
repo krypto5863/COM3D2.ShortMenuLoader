@@ -18,9 +18,6 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>G:\KISS\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="Unity.Burst">
-      <HintPath>F:\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\Unity.Burst.dll</HintPath>
-    </Reference>
     <Reference Include="UnityEngine">
       <HintPath>F:\COM3D2Test 2.5\COM3D2_5\COM3D2x64_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>

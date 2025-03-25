@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using COM3D2API.Utilities;
-using Unity.Burst;
 using UnityEngine;
 
 namespace ShortMenuLoader.Loaders

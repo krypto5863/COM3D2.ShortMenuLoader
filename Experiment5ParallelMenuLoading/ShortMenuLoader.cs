@@ -26,7 +26,7 @@ namespace ShortMenuLoader
 	{
 		public const string GUID = "org.krypto5863.com3d2.shortmenuloader";
 		public const string Name = "ShortMenuLoader";
-		public const string Version = "1.6";
+		public const string Version = "1.7";
 
 		private Harmony _harmony;
 		public static ShortMenuLoader PlugInstance;
